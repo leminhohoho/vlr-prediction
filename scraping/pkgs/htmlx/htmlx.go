@@ -7,28 +7,50 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/PuerkitoBio/goquery"
 )
+
+type Config struct {
+	dateFormat string
+}
+
+func NewDefaultConfig() *Config {
+	return &Config{
+		dateFormat: "2006-01-02T15:04:05Z07:00",
+	}
+}
+
+type Option func(*Config)
+
+// Set the date format which is used for time.Time field, the default one is "2006-01-02T15:04:05Z07:00"
+func SetDateFormat(format string) Option {
+	return func(c *Config) {
+		c.dateFormat = format
+	}
+}
 
 // Parse the content from HTML string to struct
 func ParseFromString(
 	s any,
 	content string,
+	opts ...Option,
 ) error {
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(content))
 	if err != nil {
 		return err
 	}
-	return ParseFromSelection(s, doc.Selection)
+	return ParseFromSelection(s, doc.Selection, opts...)
 }
 
 // Parse the content from goquery Selection to struct
 func ParseFromDocument(
 	s any,
 	doc *goquery.Document,
+	opts ...Option,
 ) error {
-	return ParseFromSelection(s, doc.Selection)
+	return ParseFromSelection(s, doc.Selection, opts...)
 }
 
 // Parse the content from HTML string to struct with context
@@ -36,6 +58,7 @@ func ParseFromStringWithContext(
 	ctx context.Context,
 	s any,
 	content string,
+	opts ...Option,
 ) error {
 	errChan := make(chan error)
 
@@ -45,7 +68,7 @@ func ParseFromStringWithContext(
 			errChan <- err
 		}
 
-		errChan <- ParseFromSelection(s, doc.Selection)
+		errChan <- ParseFromSelection(s, doc.Selection, opts...)
 	}()
 
 	select {
@@ -59,11 +82,12 @@ func ParseFromDocumentWithContext(
 	ctx context.Context,
 	s any,
 	doc *goquery.Document,
+	opts ...Option,
 ) error {
 	errChan := make(chan error)
 
 	go func() {
-		errChan <- ParseFromSelection(s, doc.Selection)
+		errChan <- ParseFromSelection(s, doc.Selection, opts...)
 	}()
 
 	select {
@@ -77,11 +101,12 @@ func ParseFromSelectionWithContext(
 	ctx context.Context,
 	s any,
 	sel *goquery.Selection,
+	opts ...Option,
 ) error {
 	errChan := make(chan error)
 
 	go func() {
-		errChan <- ParseFromSelection(s, sel)
+		errChan <- ParseFromSelection(s, sel, opts...)
 	}()
 
 	select {
@@ -94,6 +119,7 @@ func ParseFromSelectionWithContext(
 func ParseFromSelection(
 	s any,
 	sel *goquery.Selection,
+	opts ...Option,
 ) error {
 	v := reflect.ValueOf(s)
 
@@ -103,16 +129,34 @@ func ParseFromSelection(
 
 	v = v.Elem()
 
-	if err := parseFromReflectValue(v, sel); err != nil {
+	config := NewDefaultConfig()
+
+	for _, opt := range opts {
+		opt(config)
+	}
+
+	if err := parseFromReflectValue(v, sel, config); err != nil {
 		return err
 	}
 
 	return nil
 }
 
+// Check if the struct is of supported struct types
+func isStructToParse(v reflect.Value) bool {
+	switch v.Type() {
+	case reflect.TypeOf(time.Time{}):
+		return true
+		// NOTE: Add supported types here
+	}
+
+	return false
+}
+
 func parseFromReflectValue(
 	v reflect.Value,
 	sel *goquery.Selection,
+	config *Config,
 ) error {
 	if v.Kind() != reflect.Struct {
 		return fmt.Errorf("value is not a struct")
@@ -125,8 +169,8 @@ func parseFromReflectValue(
 		fieldType := t.Field(i)
 		fieldVal := v.Field(i)
 
-		if fieldVal.Kind() == reflect.Struct {
-			if err = parseFromReflectValue(fieldVal, sel); err != nil {
+		if fieldVal.Kind() == reflect.Struct && !isStructToParse(fieldVal) {
+			if err = parseFromReflectValue(fieldVal, sel, config); err != nil {
 				return fmt.Errorf("Error parsing value to field '%s' : %s", fieldType.Name, err.Error())
 			}
 			continue
@@ -152,7 +196,7 @@ func parseFromReflectValue(
 			return fmt.Errorf("Error getting raw value from field '%s': %s", fieldType.Name, err.Error())
 		}
 
-		if err = parseValue(&fieldVal, rawVal); err != nil {
+		if err = parseValue(&fieldVal, rawVal, config); err != nil {
 			return fmt.Errorf("Error parsing value to field '%s': %s", fieldType.Name, err.Error())
 		}
 	}
@@ -181,7 +225,7 @@ func getRawValue(
 	}
 }
 
-func parseValue(fieldVal *reflect.Value, rawVal string) error {
+func parseValue(fieldVal *reflect.Value, rawVal string, config *Config) error {
 	if !fieldVal.IsValid() {
 		return fmt.Errorf("Field doesn't represent a value")
 	}
@@ -190,10 +234,10 @@ func parseValue(fieldVal *reflect.Value, rawVal string) error {
 		return fmt.Errorf("Field can't be set")
 	}
 
-	switch fieldVal.Kind() {
-	case reflect.String:
+	switch fieldVal.Type() {
+	case reflect.TypeOf(""):
 		fieldVal.SetString(strings.TrimSpace(rawVal))
-	case reflect.Int:
+	case reflect.TypeOf(0):
 		trimmedRawVal := strings.TrimSpace(rawVal)
 		if !regexp.MustCompile(`^[a-zA-Z$%]?\s*[0-9]+\s*[a-zA-Z$%]?`).MatchString(trimmedRawVal) {
 			return fmt.Errorf("%s is not valid for parsing to integer", trimmedRawVal)
@@ -206,7 +250,7 @@ func parseValue(fieldVal *reflect.Value, rawVal string) error {
 		}
 
 		fieldVal.SetInt(int64(intVal))
-	case reflect.Float64:
+	case reflect.TypeOf(0.5):
 		trimmedRawVal := strings.TrimSpace(rawVal)
 		if !regexp.MustCompile(`^[a-zA-Z$%]?\s*-?\d+(?:[,.]\d+)*(\.\d+)?\s*[a-zA-Z$%]$`).
 			MatchString(trimmedRawVal) {
@@ -220,6 +264,15 @@ func parseValue(fieldVal *reflect.Value, rawVal string) error {
 		}
 
 		fieldVal.SetFloat(floatVal)
+	case reflect.TypeOf(time.Time{}):
+		date, err := time.Parse(config.dateFormat, strings.TrimSpace(rawVal))
+		if err != nil {
+			return err
+		}
+
+		fieldVal.Set(reflect.ValueOf(date))
+	default:
+		return fmt.Errorf("Value of type %s is not supported", fieldVal.Type().String())
 	}
 
 	return nil

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/PuerkitoBio/goquery"
 )
@@ -24,7 +25,7 @@ type MatchInfo struct {
 	BanPickLog    BanPickLog
 }
 
-func TestHTMLx(t *testing.T) {
+func TestHTMLxPrimitiveTypes(t *testing.T) {
 	res, err := http.Get(url)
 	if err != nil {
 		t.Fatal(err)
@@ -82,4 +83,30 @@ func TestHTMLx(t *testing.T) {
 	fmt.Println(matchInfo.TournamentURL)
 	fmt.Println(matchInfo.TeamWonBet)
 	fmt.Println(matchInfo.BanPickLog.Value)
+}
+
+type ResultPageInfo struct {
+	TopDate    time.Time `selector:"#wrapper > div.col-container > div > div:nth-child(2)"`
+	SecondDate time.Time `selector:"#wrapper > div.col-container > div > div:nth-child(6)"`
+}
+
+func TestHtmlxHighLevelTypes(t *testing.T) {
+	res, err := http.Get("https://www.vlr.gg/matches/results")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	doc, err := goquery.NewDocumentFromReader(res.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resultPageInfo := ResultPageInfo{}
+
+	if err := ParseFromDocument(&resultPageInfo, doc, SetDateFormat("Mon, January 2, 2006")); err != nil {
+		t.Fatal(err)
+	}
+
+	fmt.Println(resultPageInfo.TopDate.Format("Mon, January 2, 2006"))
+	fmt.Println(resultPageInfo.SecondDate.Format("Mon, January 2, 2006"))
 }
