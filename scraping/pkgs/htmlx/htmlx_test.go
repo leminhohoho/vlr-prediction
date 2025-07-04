@@ -3,6 +3,8 @@ package htmlx
 import (
 	"fmt"
 	"net/http"
+	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -23,6 +25,7 @@ type MatchInfo struct {
 	TournamentURL string `selector:"#wrapper > div.col-container > div.col.mod-3 > div.wf-card.mod-color.mod-bg-after-striped_purple.match-header > div.match-header-super > div:nth-child(1) > a"                                                                source:"attr=href"`
 	TeamWonBet    int    `selector:"#wrapper > div.col-container > div.col.mod-3 > div:nth-child(2) > a:nth-child(2) > div > div.match-bet-item-team > span:nth-child(4)"`
 	BanPickLog    BanPickLog
+	PatchNo       float64 `selector:"#wrapper > div.col-container > div.col.mod-3 > div.wf-card.mod-color.mod-bg-after-striped_purple.match-header > div.match-header-super > div:nth-child(2) > div > div:nth-child(3) > div"                                                        parser:"patchNo"`
 }
 
 func TestHTMLxPrimitiveTypes(t *testing.T) {
@@ -38,7 +41,19 @@ func TestHTMLxPrimitiveTypes(t *testing.T) {
 
 	matchInfo := MatchInfo{}
 
-	if err = ParseFromDocument(&matchInfo, doc); err != nil {
+	parsers := map[string]Parser{
+		"patchNo": func(rawVal string) any {
+			patchNoStr := strings.ReplaceAll(strings.TrimSpace(rawVal), "Patch ", "")
+			patchNo, err := strconv.ParseFloat(patchNoStr, 64)
+			if err != nil {
+				t.Error(err)
+			}
+
+			return patchNo
+		},
+	}
+
+	if err = ParseFromDocument(&matchInfo, doc, SetParsers(parsers)); err != nil {
 		t.Fatal(err)
 	}
 
@@ -83,6 +98,7 @@ func TestHTMLxPrimitiveTypes(t *testing.T) {
 	fmt.Println(matchInfo.TournamentURL)
 	fmt.Println(matchInfo.TeamWonBet)
 	fmt.Println(matchInfo.BanPickLog.Value)
+	fmt.Println(matchInfo.PatchNo)
 }
 
 type ResultPageInfo struct {

@@ -3,6 +3,7 @@ package htmlx
 import (
 	"context"
 	"fmt"
+	"maps"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -12,13 +13,17 @@ import (
 	"github.com/PuerkitoBio/goquery"
 )
 
+type Parser func(string) any
+
 type Config struct {
 	dateFormat string
+	parsers    map[string]Parser
 }
 
 func NewDefaultConfig() *Config {
 	return &Config{
 		dateFormat: "2006-01-02T15:04:05Z07:00",
+		parsers:    map[string]Parser{},
 	}
 }
 
@@ -29,6 +34,36 @@ func SetDateFormat(format string) Option {
 	return func(c *Config) {
 		c.dateFormat = format
 	}
+}
+
+func SetParsers(parsers map[string]Parser) Option {
+	return func(c *Config) {
+		maps.Copy(c.parsers, parsers)
+	}
+}
+
+type HtmlxTags struct {
+	selector string
+	source   string
+	parser   string
+}
+
+func initializeHtmlxTags(fieldType reflect.StructField) (HtmlxTags, error) {
+	var htmlxTags HtmlxTags
+
+	htmlxTags.selector = fieldType.Tag.Get("selector")
+	if htmlxTags.selector == "" {
+		return htmlxTags, fmt.Errorf("Missing selector for field '%s'", fieldType.Name)
+	}
+
+	htmlxTags.source = fieldType.Tag.Get("source")
+	if htmlxTags.source == "" {
+		htmlxTags.source = "content"
+	}
+
+	htmlxTags.parser = fieldType.Tag.Get("parser")
+
+	return htmlxTags, nil
 }
 
 // Parse the content from HTML string to struct
@@ -175,28 +210,23 @@ func parseFromReflectValue(
 			}
 			continue
 		}
-
-		selector := fieldType.Tag.Get("selector")
-		if selector == "" {
-			return fmt.Errorf("Missing selector for field '%s'", fieldType.Name)
+		// TODO: Reigister all struct tags here
+		htmlxTags, err := initializeHtmlxTags(fieldType)
+		if err != nil {
+			return fmt.Errorf("Error extracting tags from field '%s': %s", fieldType.Name, err.Error())
 		}
 
-		htmlElement := sel.Find(selector)
+		htmlElement := sel.Find(htmlxTags.selector)
 		if htmlElement.Length() == 0 {
 			return fmt.Errorf("Error locating html element for field '%s'", fieldType.Name)
 		}
 
-		source := fieldType.Tag.Get("source")
-		if source == "" {
-			source = "content"
-		}
-
-		rawVal, err := getRawValue(fieldType, htmlElement, source)
+		rawVal, err := getRawValue(fieldType, htmlElement, htmlxTags.source)
 		if err != nil {
 			return fmt.Errorf("Error getting raw value from field '%s': %s", fieldType.Name, err.Error())
 		}
 
-		if err = parseValue(&fieldVal, rawVal, config); err != nil {
+		if err = parseValue(fieldVal, rawVal, config, htmlxTags); err != nil {
 			return fmt.Errorf("Error parsing value to field '%s': %s", fieldType.Name, err.Error())
 		}
 	}
@@ -225,7 +255,59 @@ func getRawValue(
 	}
 }
 
-func parseValue(fieldVal *reflect.Value, rawVal string, config *Config) error {
+func stringParser(fieldVal reflect.Value, rawVal string) {
+	fieldVal.SetString(strings.TrimSpace(rawVal))
+}
+
+func intParser(fieldVal reflect.Value, rawVal string) error {
+	trimmedRawVal := strings.TrimSpace(rawVal)
+	if !regexp.MustCompile(`^[a-zA-Z$%]?\s*[0-9]+\s*[a-zA-Z$%]?`).MatchString(trimmedRawVal) {
+		return fmt.Errorf("%s is not valid for parsing to integer", trimmedRawVal)
+	}
+
+	intStr := regexp.MustCompile(`[0-9]+`).FindString(trimmedRawVal)
+	intVal, err := strconv.Atoi(intStr)
+	if err != nil {
+		return err
+	}
+
+	fieldVal.SetInt(int64(intVal))
+
+	return nil
+}
+
+func floatParser(fieldVal reflect.Value, rawVal string) error {
+	trimmedRawVal := strings.TrimSpace(rawVal)
+	if !regexp.MustCompile(`^[a-zA-Z$%]?\s*-?\d+(?:[,.]\d+)*(\.\d+)?\s*[a-zA-Z$%]$`).
+		MatchString(trimmedRawVal) {
+		return fmt.Errorf("%s is not valid for parsing to float", trimmedRawVal)
+	}
+
+	floatStr := regexp.MustCompile(`-?\d+(?:[,.]\d+)*(\.\d+)?`).FindString(trimmedRawVal)
+	floatVal, err := strconv.ParseFloat(floatStr, 64)
+	if err != nil {
+		return err
+	}
+
+	fieldVal.SetFloat(floatVal)
+
+	return nil
+}
+
+func dateParser(fieldVal reflect.Value, rawVal, dateFormat string) error {
+	date, err := time.Parse(dateFormat, strings.TrimSpace(rawVal))
+	if err != nil {
+		return err
+	}
+
+	fieldVal.Set(reflect.ValueOf(date))
+
+	return nil
+}
+
+func parseValue(fieldVal reflect.Value, rawVal string, config *Config, htmlxTags HtmlxTags) error {
+	var err error
+
 	if !fieldVal.IsValid() {
 		return fmt.Errorf("Field doesn't represent a value")
 	}
@@ -234,43 +316,46 @@ func parseValue(fieldVal *reflect.Value, rawVal string, config *Config) error {
 		return fmt.Errorf("Field can't be set")
 	}
 
+	if htmlxTags.parser != "" {
+		parser, ok := config.parsers[htmlxTags.parser]
+		if !ok {
+			return fmt.Errorf("parser %s is not recognizable", htmlxTags.parser)
+		}
+
+		processedVal := reflect.ValueOf(parser(rawVal))
+		if !processedVal.IsValid() {
+			return fmt.Errorf("processed value using parser %s is invalid", htmlxTags.parser)
+		}
+
+		if !processedVal.Type().AssignableTo(fieldVal.Type()) {
+			return fmt.Errorf(
+				"Incompatible type when using parser %s, want %s, get %s",
+				htmlxTags.parser,
+				fieldVal.Type().String(),
+				processedVal.Type().String(),
+			)
+		}
+
+		fieldVal.Set(processedVal)
+
+		return nil
+	}
+
 	switch fieldVal.Type() {
 	case reflect.TypeOf(""):
-		fieldVal.SetString(strings.TrimSpace(rawVal))
+		stringParser(fieldVal, rawVal)
 	case reflect.TypeOf(0):
-		trimmedRawVal := strings.TrimSpace(rawVal)
-		if !regexp.MustCompile(`^[a-zA-Z$%]?\s*[0-9]+\s*[a-zA-Z$%]?`).MatchString(trimmedRawVal) {
-			return fmt.Errorf("%s is not valid for parsing to integer", trimmedRawVal)
-		}
-
-		intStr := regexp.MustCompile(`[0-9]+`).FindString(trimmedRawVal)
-		intVal, err := strconv.Atoi(intStr)
-		if err != nil {
+		if err = intParser(fieldVal, rawVal); err != nil {
 			return err
 		}
-
-		fieldVal.SetInt(int64(intVal))
 	case reflect.TypeOf(0.5):
-		trimmedRawVal := strings.TrimSpace(rawVal)
-		if !regexp.MustCompile(`^[a-zA-Z$%]?\s*-?\d+(?:[,.]\d+)*(\.\d+)?\s*[a-zA-Z$%]$`).
-			MatchString(trimmedRawVal) {
-			return fmt.Errorf("%s is not valid for parsing to integer", trimmedRawVal)
-		}
-
-		floatStr := regexp.MustCompile(`-?\d+(?:[,.]\d+)*(\.\d+)?`).FindString(trimmedRawVal)
-		floatVal, err := strconv.ParseFloat(floatStr, 64)
-		if err != nil {
+		if err = floatParser(fieldVal, rawVal); err != nil {
 			return err
 		}
-
-		fieldVal.SetFloat(floatVal)
 	case reflect.TypeOf(time.Time{}):
-		date, err := time.Parse(config.dateFormat, strings.TrimSpace(rawVal))
-		if err != nil {
+		if err = dateParser(fieldVal, rawVal, config.dateFormat); err != nil {
 			return err
 		}
-
-		fieldVal.Set(reflect.ValueOf(date))
 	default:
 		return fmt.Errorf("Value of type %s is not supported", fieldVal.Type().String())
 	}
