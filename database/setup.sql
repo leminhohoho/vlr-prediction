@@ -11,7 +11,6 @@ CREATE TABLE IF NOT EXISTS matches (
     team_2_score INTEGER NOT NULL CHECK(team_2_score >= 0),
     team_1_rating INTEGER NOT NULL CHECK(team_1_rating >= 0),
     team_2_rating INTEGER NOT NULL CHECK(team_2_rating >= 0),
-    patch_no TEXT NOT NULL,
 
     FOREIGN KEY (tournament_id) REFERENCES tournaments(id),
     FOREIGN KEY (team_1_id) REFERENCES teams(id),
