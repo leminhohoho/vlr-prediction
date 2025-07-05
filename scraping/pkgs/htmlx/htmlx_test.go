@@ -26,6 +26,7 @@ type MatchInfo struct {
 	TeamWonBet    int    `selector:"#wrapper > div.col-container > div.col.mod-3 > div:nth-child(2) > a:nth-child(2) > div > div.match-bet-item-team > span:nth-child(4)"`
 	BanPickLog    BanPickLog
 	PatchNo       float64 `selector:"#wrapper > div.col-container > div.col.mod-3 > div.wf-card.mod-color.mod-bg-after-striped_purple.match-header > div.match-header-super > div:nth-child(2) > div > div:nth-child(3) > div"                                                        parser:"patchNo"`
+	Skibidi       any
 }
 
 func TestHTMLxPrimitiveTypes(t *testing.T) {

@@ -16,9 +16,10 @@ import (
 type Parser func(string) (any, error)
 
 type Config struct {
-	dateFormat          string
-	parsers             map[string]Parser
-	allowEmptySelection bool
+	dateFormat       string
+	parsers          map[string]Parser
+	noEmptySelection bool
+	parseAllFields   bool
 }
 
 func NewDefaultConfig() *Config {
@@ -44,9 +45,17 @@ func SetParsers(parsers map[string]Parser) Option {
 	}
 }
 
-func SetAllowEmptySelection(allow bool) Option {
+// Set the parser o throw error if a selector return empty selection
+func SetNoEmptySelection(forbid bool) Option {
 	return func(c *Config) {
-		c.allowEmptySelection = allow
+		c.noEmptySelection = forbid
+	}
+}
+
+// Set the parser to force all fields to be parsable (not having required struct tags will throw error)
+func SetParseAllFields(strict bool) Option {
+	return func(c *Config) {
+		c.parseAllFields = strict
 	}
 }
 
@@ -218,14 +227,17 @@ func parseFromReflectValue(
 			}
 			continue
 		}
-		// TODO: Reigister all struct tags here
 		htmlxTags, err := initializeHtmlxTags(fieldType)
 		if err != nil {
-			return fmt.Errorf("Error extracting tags from field '%s': %s", fieldType.Name, err.Error())
+			if config.parseAllFields {
+				return fmt.Errorf("Error extracting tags from field '%s': %s", fieldType.Name, err.Error())
+			}
+
+			continue
 		}
 
 		htmlElement := sel.Find(htmlxTags.selector)
-		if !config.allowEmptySelection && htmlElement.Length() == 0 {
+		if config.noEmptySelection && htmlElement.Length() == 0 {
 			return fmt.Errorf("Error locating html element for field '%s'", fieldType.Name)
 		}
 
