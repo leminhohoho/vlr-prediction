@@ -42,14 +42,14 @@ func TestHTMLxPrimitiveTypes(t *testing.T) {
 	matchInfo := MatchInfo{}
 
 	parsers := map[string]Parser{
-		"patchNo": func(rawVal string) any {
+		"patchNo": func(rawVal string) (any, error) {
 			patchNoStr := strings.ReplaceAll(strings.TrimSpace(rawVal), "Patch ", "")
 			patchNo, err := strconv.ParseFloat(patchNoStr, 64)
 			if err != nil {
 				t.Error(err)
 			}
 
-			return patchNo
+			return patchNo, nil
 		},
 	}
 

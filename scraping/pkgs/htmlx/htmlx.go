@@ -13,7 +13,7 @@ import (
 	"github.com/PuerkitoBio/goquery"
 )
 
-type Parser func(string) any
+type Parser func(string) (any, error)
 
 type Config struct {
 	dateFormat string
@@ -322,7 +322,12 @@ func parseValue(fieldVal reflect.Value, rawVal string, config *Config, htmlxTags
 			return fmt.Errorf("parser %s is not recognizable", htmlxTags.parser)
 		}
 
-		processedVal := reflect.ValueOf(parser(rawVal))
+		val, err := parser(rawVal)
+		if err != nil {
+			return fmt.Errorf("parser '%s' error: %s", htmlxTags.parser, err.Error())
+		}
+
+		processedVal := reflect.ValueOf(val)
 		if !processedVal.IsValid() {
 			return fmt.Errorf("processed value using parser %s is invalid", htmlxTags.parser)
 		}
