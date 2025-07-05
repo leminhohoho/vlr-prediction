@@ -9,8 +9,8 @@ CREATE TABLE IF NOT EXISTS matches (
     team_2_id INTEGER NOT NULL,
     team_1_score INTEGER NOT NULL CHECK(team_1_score >= 0),
     team_2_score INTEGER NOT NULL CHECK(team_2_score >= 0),
-    team_1_rating INTEGER NOT NULL CHECK(team_1_rating >= 0),
-    team_2_rating INTEGER NOT NULL CHECK(team_2_rating >= 0),
+    team_1_rating INTEGER CHECK(team_1_rating >= 0),
+    team_2_rating INTEGER CHECK(team_2_rating >= 0),
 
     FOREIGN KEY (tournament_id) REFERENCES tournaments(id),
     FOREIGN KEY (team_1_id) REFERENCES teams(id),
@@ -21,7 +21,7 @@ DROP TABLE IF EXISTS match_maps;
 CREATE TABLE IF NOT EXISTS matche_maps (
     match_id INTEGER NOT NULL,
     map_id INTEGER NOT NULL,
-    duration INTEGER NOT NULL CHECK (duration >= 0),
+    duration INTEGER CHECK (duration >= 0),
     team_1_id INTEGER NOT NULL,
     team_2_id INTEGER NOT NULL,
     team_1_def_score INTEGER NOT NULL CHECK(team_1_def_score >= 0),
@@ -147,7 +147,7 @@ CREATE TABLE IF NOT EXISTS players (
     id INTEGER PRIMARY KEY,
     name TEXT NOT NULL,
     url TEXT UNIQUE NOT NULL,
-    img_url TEXT NOT NULL
+    img_url TEXT
 );
 
 DROP TABLE IF EXISTS teams;
@@ -156,7 +156,7 @@ CREATE TABLE IF NOT EXISTS teams (
     name TEXT NOT NULL,
     shorthand_name TEXT NOT NULL,
     url TEXT UNIQUE NOT NULL,
-    img_url TEXT NOT NULL,
+    img_url TEXT,
     region_id INTEGER NOT NULL,
 
     FOREIGN KEY (region_id) REFERENCES regions(id)
