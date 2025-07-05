@@ -16,8 +16,9 @@ import (
 type Parser func(string) (any, error)
 
 type Config struct {
-	dateFormat string
-	parsers    map[string]Parser
+	dateFormat          string
+	parsers             map[string]Parser
+	allowEmptySelection bool
 }
 
 func NewDefaultConfig() *Config {
@@ -36,9 +37,16 @@ func SetDateFormat(format string) Option {
 	}
 }
 
+// Set custom parsers for values, name of the parser is corresponded o the name in parser field of the struct tags
 func SetParsers(parsers map[string]Parser) Option {
 	return func(c *Config) {
 		maps.Copy(c.parsers, parsers)
+	}
+}
+
+func SetAllowEmptySelection(allow bool) Option {
+	return func(c *Config) {
+		c.allowEmptySelection = allow
 	}
 }
 
@@ -217,7 +225,7 @@ func parseFromReflectValue(
 		}
 
 		htmlElement := sel.Find(htmlxTags.selector)
-		if htmlElement.Length() == 0 {
+		if !config.allowEmptySelection && htmlElement.Length() == 0 {
 			return fmt.Errorf("Error locating html element for field '%s'", fieldType.Name)
 		}
 
