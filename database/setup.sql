@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS matche_maps (
     team_2_atk_score INTEGER NOT NULL CHECK(team_2_atk_score >= 0),
     team_2_ot_score INTEGER NOT NULL CHECK(team_2_ot_score >= 0),
     team_def_first INTEGER NOT NULL,
-    team_pick INTEGER NOT NULL,
+    team_pick INTEGER,
 
     FOREIGN KEY (match_id) REFERENCES matches(id),
     FOREIGN KEY (map_id) REFERENCES maps(id),
