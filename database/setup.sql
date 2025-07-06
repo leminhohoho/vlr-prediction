@@ -31,12 +31,14 @@ CREATE TABLE IF NOT EXISTS matche_maps (
     team_2_atk_score INTEGER NOT NULL CHECK(team_2_atk_score >= 0),
     team_2_ot_score INTEGER NOT NULL CHECK(team_2_ot_score >= 0),
     team_def_first INTEGER NOT NULL,
+    team_pick INTEGER NOT NULL,
 
     FOREIGN KEY (match_id) REFERENCES matches(id),
     FOREIGN KEY (map_id) REFERENCES maps(id),
     FOREIGN KEY (team_1_id) REFERENCES teams(id),
     FOREIGN KEY (team_2_id) REFERENCES teams(id),
-    FOREIGN KEY (team_def_first) REFERENCES teams(id)
+    FOREIGN KEY (team_def_first) REFERENCES teams(id),
+    FOREIGN KEY (team_pick) REFERENCES teams(id)
 );
 
 DROP TABLE IF EXISTS round_stats;
