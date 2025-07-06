@@ -39,10 +39,10 @@ type MatchSchema struct {
 }
 
 type MatchScraper struct {
-	Data        MatchSchema
-	HtmlContent *goquery.Selection
-	Conn        *sql.DB
-	Tx          *gorm.Tx
+	Data             MatchSchema
+	MatchPageContent *goquery.Selection
+	Conn             *sql.DB
+	Tx               *gorm.Tx
 }
 
 func NewMatchScraper(
@@ -59,9 +59,9 @@ func NewMatchScraper(
 			Url:  url,
 			Date: date,
 		},
-		HtmlContent: htmlContent,
-		Conn:        conn,
-		Tx:          tx,
+		MatchPageContent: htmlContent,
+		Conn:             conn,
+		Tx:               tx,
 	}
 }
 
@@ -125,7 +125,7 @@ func (m *MatchScraper) Scrape() error {
 		"ratingParser": ratingParser,
 	}
 
-	if err := htmlx.ParseFromSelection(&m.Data, m.HtmlContent, htmlx.SetParsers(parsers)); err != nil {
+	if err := htmlx.ParseFromSelection(&m.Data, m.MatchPageContent, htmlx.SetParsers(parsers)); err != nil {
 		return err
 	}
 
