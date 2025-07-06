@@ -2,6 +2,7 @@ package matches
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -103,18 +104,15 @@ func ratingParser(rawVal string) (any, error) {
 	return rating, nil
 }
 
-func (m *MatchScraper) PrettyPrint() {
-	fmt.Printf("Match id: %d\n", m.Data.Id)
-	fmt.Printf("Match url: %s\n", m.Data.Url)
-	fmt.Printf("Match date: %s\n", m.Data.Date.Format("Mon, January 2, 2006"))
-	fmt.Printf("Match tournament id: %d\n", m.Data.TournamentId)
-	fmt.Printf("Match stage: %s\n", m.Data.Stage)
-	fmt.Printf("Match team 1 id: %d\n", m.Data.Team1Id)
-	fmt.Printf("Match team 2 id: %d\n", m.Data.Team2Id)
-	fmt.Printf("Match team 1 score: %d\n", m.Data.Team1Score)
-	fmt.Printf("Match team 2 score: %d\n", m.Data.Team2Score)
-	fmt.Printf("Match team 1 rating: %d\n", m.Data.Team1Rating)
-	fmt.Printf("Match team 2 rating: %d\n", m.Data.Team2Rating)
+func (m *MatchScraper) PrettyPrint() error {
+	jsonStr, err := json.MarshalIndent(m.Data, "", "		")
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(string(jsonStr))
+
+	return nil
 }
 
 func (m *MatchScraper) Scrape() error {

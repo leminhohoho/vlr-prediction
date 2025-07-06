@@ -51,7 +51,9 @@ func TestMatchWithFullInformation(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	matchScraper.PrettyPrint()
+	if err := matchScraper.PrettyPrint(); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestMatchWithMissingInformation(t *testing.T) {
@@ -82,5 +84,7 @@ func TestMatchWithMissingInformation(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	matchScraper.PrettyPrint()
+	if err := matchScraper.PrettyPrint(); err != nil {
+		t.Fatal(err)
+	}
 }
