@@ -1,6 +1,8 @@
 package helpers
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestToSnakeCase(t *testing.T) {
 	tests := [][2]string{
@@ -13,6 +15,30 @@ func TestToSnakeCase(t *testing.T) {
 		result := ToSnakeCase(test[0])
 		if result != test[1] {
 			t.Errorf("Wrong result, want %s, get %s", test[1], result)
+		}
+	}
+}
+
+type TimeToSecondsTest struct {
+	timeStr  string
+	duration int
+}
+
+func TestTimeToSeconds(t *testing.T) {
+	tests := []TimeToSecondsTest{
+		{"00:00", 0},
+		{"49:10", 2950},
+		{"1:50:20", 6620},
+	}
+
+	for _, test := range tests {
+		duration, err := TimeToSeconds(test.timeStr)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if duration != test.duration {
+			t.Errorf("Wrong duration, want %d, get %d instead", test.duration, duration)
 		}
 	}
 }
