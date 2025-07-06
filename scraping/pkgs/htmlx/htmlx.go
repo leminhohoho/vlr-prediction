@@ -280,45 +280,42 @@ func getRawValue(
 	}
 }
 
-func parseValue(fieldVal reflect.Value, rawVal string, config *Config, htmlxTags HtmlxTags) error {
-	if !fieldVal.IsValid() {
-		return fmt.Errorf("Field doesn't represent a value")
+func parseValueWithCustomParser(
+	fieldVal reflect.Value,
+	rawVal string,
+	config *Config,
+	parserName string,
+) error {
+	parser, ok := config.parsers[parserName]
+	if !ok {
+		return fmt.Errorf("parser %s is not recognizable", parserName)
 	}
 
-	if !fieldVal.CanSet() {
-		return fmt.Errorf("Field can't be set")
+	val, err := parser(rawVal)
+	if err != nil {
+		return fmt.Errorf("parser '%s' error: %s", parserName, err.Error())
 	}
 
-	if htmlxTags.parser != "" {
-		parser, ok := config.parsers[htmlxTags.parser]
-		if !ok {
-			return fmt.Errorf("parser %s is not recognizable", htmlxTags.parser)
-		}
-
-		val, err := parser(rawVal)
-		if err != nil {
-			return fmt.Errorf("parser '%s' error: %s", htmlxTags.parser, err.Error())
-		}
-
-		processedVal := reflect.ValueOf(val)
-		if !processedVal.IsValid() {
-			return fmt.Errorf("processed value using parser %s is invalid", htmlxTags.parser)
-		}
-
-		if !processedVal.Type().AssignableTo(fieldVal.Type()) {
-			return fmt.Errorf(
-				"Incompatible type when using parser %s, want %s, get %s",
-				htmlxTags.parser,
-				fieldVal.Type().String(),
-				processedVal.Type().String(),
-			)
-		}
-
-		fieldVal.Set(processedVal)
-
-		return nil
+	processedVal := reflect.ValueOf(val)
+	if !processedVal.IsValid() {
+		return fmt.Errorf("processed value using parser %s is invalid", parserName)
 	}
 
+	if !processedVal.Type().AssignableTo(fieldVal.Type()) {
+		return fmt.Errorf(
+			"Incompatible type when using parser %s, want %s, get %s",
+			parserName,
+			fieldVal.Type().String(),
+			processedVal.Type().String(),
+		)
+	}
+
+	fieldVal.Set(processedVal)
+
+	return nil
+}
+
+func parseSupportedValues(fieldVal reflect.Value, rawVal string, config *Config, htmlxTags HtmlxTags) error {
 	switch fieldVal.Type() {
 	case reflect.TypeOf(""):
 		strVal, _ := StringParserClean(rawVal)
@@ -351,4 +348,20 @@ func parseValue(fieldVal reflect.Value, rawVal string, config *Config, htmlxTags
 	}
 
 	return nil
+}
+
+func parseValue(fieldVal reflect.Value, rawVal string, config *Config, htmlxTags HtmlxTags) error {
+	if !fieldVal.IsValid() {
+		return fmt.Errorf("Field doesn't represent a value")
+	}
+
+	if !fieldVal.CanSet() {
+		return fmt.Errorf("Field can't be set")
+	}
+
+	if htmlxTags.parser != "" {
+		return parseValueWithCustomParser(fieldVal, rawVal, config, htmlxTags.parser)
+	}
+
+	return parseSupportedValues(fieldVal, rawVal, config, htmlxTags)
 }
