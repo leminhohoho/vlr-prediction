@@ -6,14 +6,11 @@ import (
 	"maps"
 	"reflect"
 	"regexp"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
 )
-
-type Parser func(string) (any, error)
 
 type Config struct {
 	dateFormat          string
@@ -283,59 +280,7 @@ func getRawValue(
 	}
 }
 
-func stringParser(fieldVal reflect.Value, rawVal string) {
-	fieldVal.SetString(strings.TrimSpace(rawVal))
-}
-
-func intParser(fieldVal reflect.Value, rawVal string) error {
-	trimmedRawVal := strings.TrimSpace(rawVal)
-	if !regexp.MustCompile(`^[a-zA-Z$%]?\s*[0-9]+\s*[a-zA-Z$%]?`).MatchString(trimmedRawVal) {
-		return fmt.Errorf("%s is not valid for parsing to integer", trimmedRawVal)
-	}
-
-	intStr := regexp.MustCompile(`[0-9]+`).FindString(trimmedRawVal)
-	intVal, err := strconv.Atoi(intStr)
-	if err != nil {
-		return err
-	}
-
-	fieldVal.SetInt(int64(intVal))
-
-	return nil
-}
-
-func floatParser(fieldVal reflect.Value, rawVal string) error {
-	trimmedRawVal := strings.TrimSpace(rawVal)
-	if !regexp.MustCompile(`^[a-zA-Z$%]?\s*-?\d+(?:[,.]\d+)*(\.\d+)?\s*[a-zA-Z$%]$`).
-		MatchString(trimmedRawVal) {
-		return fmt.Errorf("%s is not valid for parsing to float", trimmedRawVal)
-	}
-
-	floatStr := regexp.MustCompile(`-?\d+(?:[,.]\d+)*(\.\d+)?`).FindString(trimmedRawVal)
-	floatVal, err := strconv.ParseFloat(floatStr, 64)
-	if err != nil {
-		return err
-	}
-
-	fieldVal.SetFloat(floatVal)
-
-	return nil
-}
-
-func dateParser(fieldVal reflect.Value, rawVal, dateFormat string) error {
-	date, err := time.Parse(dateFormat, strings.TrimSpace(rawVal))
-	if err != nil {
-		return err
-	}
-
-	fieldVal.Set(reflect.ValueOf(date))
-
-	return nil
-}
-
 func parseValue(fieldVal reflect.Value, rawVal string, config *Config, htmlxTags HtmlxTags) error {
-	var err error
-
 	if !fieldVal.IsValid() {
 		return fmt.Errorf("Field doesn't represent a value")
 	}
@@ -376,19 +321,27 @@ func parseValue(fieldVal reflect.Value, rawVal string, config *Config, htmlxTags
 
 	switch fieldVal.Type() {
 	case reflect.TypeOf(""):
-		stringParser(fieldVal, rawVal)
+		strVal, _ := StringParserClean(rawVal)
+		fieldVal.Set(reflect.ValueOf(strVal))
 	case reflect.TypeOf(0):
-		if err = intParser(fieldVal, rawVal); err != nil {
-			return err
+		intVal, err := IntParser(rawVal)
+		if err != nil {
+			return fmt.Errorf("Int parser error: %s", err.Error())
 		}
+		fieldVal.Set(reflect.ValueOf(intVal))
 	case reflect.TypeOf(0.5):
-		if err = floatParser(fieldVal, rawVal); err != nil {
-			return err
+		floatVal, err := FloatParser(rawVal)
+		if err != nil {
+			return fmt.Errorf("Float parser error: %s", err.Error())
 		}
+		fieldVal.Set(reflect.ValueOf(floatVal))
 	case reflect.TypeOf(time.Time{}):
-		if err = dateParser(fieldVal, rawVal, config.dateFormat); err != nil {
-			return err
+		dateVal, err := DateParser(config.dateFormat)(rawVal)
+		if err != nil {
+			return fmt.Errorf("Date parser error: %s", err.Error())
 		}
+
+		fieldVal.Set(reflect.ValueOf(dateVal))
 	default:
 		if config.allowParseToPointer && fieldVal.Kind() == reflect.Ptr {
 			return parseValue(fieldVal.Elem(), rawVal, config, htmlxTags)

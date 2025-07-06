@@ -27,6 +27,7 @@ type MatchInfo struct {
 	BanPickLog    BanPickLog
 	PatchNo       float64 `selector:"#wrapper > div.col-container > div.col.mod-3 > div.wf-card.mod-color.mod-bg-after-striped_purple.match-header > div.match-header-super > div:nth-child(2) > div > div:nth-child(3) > div"                                                        parser:"patchNo"`
 	Skibidi       any
+	NullContent   int `selector:"#wrapper > div.col-container > div.col.mod-3 > div.wf-card.mod-color.mod-bg-after-striped_purple.match-header > div.match-header-super > div:nth-child(2) > div > div:nth-child(3) > div > div > div"                                            parser:"nullParser"`
 }
 
 func TestHTMLxPrimitiveTypes(t *testing.T) {
@@ -54,6 +55,7 @@ func TestHTMLxPrimitiveTypes(t *testing.T) {
 
 			return patchNo, nil
 		},
+		"nullParser": IfNullParser(-1, IntParser),
 	}
 
 	if err = ParseFromDocument(&matchInfo, doc, SetParsers(parsers), SetAllowParseToPointer(true)); err != nil {
@@ -94,6 +96,10 @@ func TestHTMLxPrimitiveTypes(t *testing.T) {
 		)
 	}
 
+	if matchInfo.NullContent != -1 {
+		t.Errorf("Null content should be -1, it is %d instead", matchInfo.NullContent)
+	}
+
 	fmt.Println(matchInfo.Team1Name)
 	fmt.Println(matchInfo.Team2Name)
 	fmt.Println(matchInfo.Team1Score)
@@ -102,6 +108,7 @@ func TestHTMLxPrimitiveTypes(t *testing.T) {
 	fmt.Println(*matchInfo.TeamWonBet)
 	fmt.Println(matchInfo.BanPickLog.Value)
 	fmt.Println(matchInfo.PatchNo)
+	fmt.Println(matchInfo.NullContent)
 }
 
 type ResultPageInfo struct {
