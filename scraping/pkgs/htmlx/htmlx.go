@@ -18,6 +18,8 @@ type Config struct {
 	noEmptySelection    bool
 	parseAllFields      bool
 	allowParseToPointer bool
+	noMissingAttributes bool
+	allowNilPointer     bool
 }
 
 func NewDefaultConfig() *Config {
@@ -61,6 +63,20 @@ func SetParseAllFields(strict bool) Option {
 func SetAllowParseToPointer(allow bool) Option {
 	return func(c *Config) {
 		c.allowParseToPointer = allow
+	}
+}
+
+// Force the attributes if specified as sources to must exist
+func SetNoMissingAttributes(forbid bool) Option {
+	return func(c *Config) {
+		c.noMissingAttributes = forbid
+	}
+}
+
+// Allow pointer to be set to nil
+func SetAllowNilPointer(allow bool) Option {
+	return func(c *Config) {
+		c.allowNilPointer = allow
 	}
 }
 
@@ -246,7 +262,7 @@ func parseFromReflectValue(
 			return fmt.Errorf("Error locating html element for field '%s'", fieldType.Name)
 		}
 
-		rawVal, err := getRawValue(fieldType, htmlElement, htmlxTags.source)
+		rawVal, err := getRawValue(fieldType, htmlElement, htmlxTags.source, config)
 		if err != nil {
 			return fmt.Errorf("Error getting raw value from field '%s': %s", fieldType.Name, err.Error())
 		}
@@ -263,6 +279,7 @@ func getRawValue(
 	fieldType reflect.StructField,
 	htmlElement *goquery.Selection,
 	source string,
+	config *Config,
 ) (string, error) {
 	if source == "content" {
 		return htmlElement.Children().Remove().End().Text(), nil
@@ -271,7 +288,11 @@ func getRawValue(
 		attrName := source[5:]
 		value, exists := htmlElement.Attr(attrName)
 		if !exists {
-			return "", fmt.Errorf("Error locating attribute %s for field '%s'", source, fieldType.Name)
+			if config.noMissingAttributes {
+				return "", fmt.Errorf("Error locating attribute %s for field '%s'", source, fieldType.Name)
+			}
+
+			return "", nil
 		}
 
 		return value, nil
@@ -298,6 +319,11 @@ func parseValueWithCustomParser(
 
 	processedVal := reflect.ValueOf(val)
 	if !processedVal.IsValid() {
+		if config.allowNilPointer {
+			fieldVal.Set(reflect.Zero(fieldVal.Type()))
+			return nil
+		}
+
 		return fmt.Errorf("processed value using parser %s is invalid", parserName)
 	}
 
