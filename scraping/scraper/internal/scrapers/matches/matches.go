@@ -105,7 +105,7 @@ func ratingParser(rawVal string) (any, error) {
 }
 
 func (m *MatchScraper) PrettyPrint() error {
-	jsonStr, err := json.MarshalIndent(m.Data, "", "		")
+	jsonStr, err := json.MarshalIndent(m.Data, "", "	")
 	if err != nil {
 		return err
 	}
