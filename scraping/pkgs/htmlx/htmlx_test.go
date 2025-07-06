@@ -23,7 +23,7 @@ type MatchInfo struct {
 	Team1Score    int    `selector:"#wrapper > div.col-container > div.col.mod-3 > div.wf-card.mod-color.mod-bg-after-striped_purple.match-header > div.match-header-vs > div > div.match-header-vs-score > div:nth-child(1) > span.match-header-vs-score-winner"`
 	Team2Score    int    `selector:"#wrapper > div.col-container > div.col.mod-3 > div.wf-card.mod-color.mod-bg-after-striped_purple.match-header > div.match-header-vs > div > div.match-header-vs-score > div:nth-child(1) > span.match-header-vs-score-loser"`
 	TournamentURL string `selector:"#wrapper > div.col-container > div.col.mod-3 > div.wf-card.mod-color.mod-bg-after-striped_purple.match-header > div.match-header-super > div:nth-child(1) > a"                                                                source:"attr=href"`
-	TeamWonBet    int    `selector:"#wrapper > div.col-container > div.col.mod-3 > div:nth-child(2) > a:nth-child(2) > div > div.match-bet-item-team > span:nth-child(4)"`
+	TeamWonBet    *int   `selector:"#wrapper > div.col-container > div.col.mod-3 > div:nth-child(2) > a:nth-child(2) > div > div.match-bet-item-team > span:nth-child(4)"`
 	BanPickLog    BanPickLog
 	PatchNo       float64 `selector:"#wrapper > div.col-container > div.col.mod-3 > div.wf-card.mod-color.mod-bg-after-striped_purple.match-header > div.match-header-super > div:nth-child(2) > div > div:nth-child(3) > div"                                                        parser:"patchNo"`
 	Skibidi       any
@@ -40,7 +40,9 @@ func TestHTMLxPrimitiveTypes(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	matchInfo := MatchInfo{}
+	var teamWonBet int
+
+	matchInfo := MatchInfo{TeamWonBet: &teamWonBet}
 
 	parsers := map[string]Parser{
 		"patchNo": func(rawVal string) (any, error) {
@@ -54,7 +56,7 @@ func TestHTMLxPrimitiveTypes(t *testing.T) {
 		},
 	}
 
-	if err = ParseFromDocument(&matchInfo, doc, SetParsers(parsers)); err != nil {
+	if err = ParseFromDocument(&matchInfo, doc, SetParsers(parsers), SetAllowParseToPointer(true)); err != nil {
 		t.Fatal(err)
 	}
 
@@ -81,7 +83,7 @@ func TestHTMLxPrimitiveTypes(t *testing.T) {
 		)
 	}
 
-	if matchInfo.TeamWonBet != 179 {
+	if *matchInfo.TeamWonBet != 179 {
 		t.Errorf("Wrong team won bet ammount, want 179, get %d", matchInfo.TeamWonBet)
 	}
 
@@ -97,7 +99,7 @@ func TestHTMLxPrimitiveTypes(t *testing.T) {
 	fmt.Println(matchInfo.Team1Score)
 	fmt.Println(matchInfo.Team2Score)
 	fmt.Println(matchInfo.TournamentURL)
-	fmt.Println(matchInfo.TeamWonBet)
+	fmt.Println(*matchInfo.TeamWonBet)
 	fmt.Println(matchInfo.BanPickLog.Value)
 	fmt.Println(matchInfo.PatchNo)
 }

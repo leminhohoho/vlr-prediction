@@ -16,10 +16,11 @@ import (
 type Parser func(string) (any, error)
 
 type Config struct {
-	dateFormat       string
-	parsers          map[string]Parser
-	noEmptySelection bool
-	parseAllFields   bool
+	dateFormat          string
+	parsers             map[string]Parser
+	noEmptySelection    bool
+	parseAllFields      bool
+	allowParseToPointer bool
 }
 
 func NewDefaultConfig() *Config {
@@ -56,6 +57,13 @@ func SetNoEmptySelection(forbid bool) Option {
 func SetParseAllFields(strict bool) Option {
 	return func(c *Config) {
 		c.parseAllFields = strict
+	}
+}
+
+// Set the parser to allow parsing the value to the type of value that the pointer points to
+func SetAllowParseToPointer(allow bool) Option {
+	return func(c *Config) {
+		c.allowParseToPointer = allow
 	}
 }
 
@@ -382,6 +390,10 @@ func parseValue(fieldVal reflect.Value, rawVal string, config *Config, htmlxTags
 			return err
 		}
 	default:
+		if config.allowParseToPointer && fieldVal.Kind() == reflect.Ptr {
+			return parseValue(fieldVal.Elem(), rawVal, config, htmlxTags)
+		}
+
 		return fmt.Errorf("Value of type %s is not supported", fieldVal.Type().String())
 	}
 
