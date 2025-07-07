@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS round_stats (
     team_1_bank INTEGER NOT NULL CHECK(team_1_bank >= 0),
     team_2_bank INTEGER NOT NULL CHECK(team_2_bank >= 0),
     team_won INTEGER NOT NULL,
-    won_method TEXT NOT NULL CHECK(won_method IN ('eliminate', 'spike_explode', 'defuse')),
+    won_method TEXT NOT NULL CHECK(won_method IN ('eliminate', 'spike_explode', 'defuse', 'out_of_time')),
 
     FOREIGN KEY (match_id) REFERENCES matches(id),
     FOREIGN KEY (map_id) REFERENCES maps(id),
