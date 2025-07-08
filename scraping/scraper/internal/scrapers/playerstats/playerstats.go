@@ -26,16 +26,17 @@ type PlayerOverviewStatSchema struct {
 	TeamId      int
 	PlayerId    int
 	Side        Side
-	Rating      *float64 `selector:"td:nth-child(3) > span > span"                     parser:"floatToPtrParser"`
-	Acs         *float64 `selector:"td:nth-child(4) > span > span"                     parser:"floatToPtrParser"`
-	Kills       *int     `selector:"td:nth-child(5) > span > span"                     parser:"intToPtrParser"`
-	Deaths      *int     `selector:"td:nth-child(6) > span > span:nth-child(2) > span" parser:"intToPtrParser"`
-	Assists     *int     `selector:"td:nth-child(7) > span > span"                     parser:"intToPtrParser"`
-	Kast        *float64 `selector:"td:nth-child(9) > span > span"                     parser:"floatToPtrParser"`
-	Adr         *float64 `selector:"td:nth-child(10) > span > span"                    parser:"floatToPtrParser"`
-	Hs          *float64 `selector:"td:nth-child(11) > span > span"                    parser:"floatToPtrParser"`
-	FirstKills  *int     `selector:"td:nth-child(12) > span > span"                    parser:"intToPtrParser"`
-	FirstDeaths *int     `selector:"td:nth-child(13) > span > span"                    parser:"intToPtrParser"`
+	AgentId     int      `selector:"td.mod-agents > div > span > img"                  source:"attr=title" parser:"agentParser"`
+	Rating      *float64 `selector:"td:nth-child(3) > span > span"                                         parser:"floatToPtrParser"`
+	Acs         *float64 `selector:"td:nth-child(4) > span > span"                                         parser:"floatToPtrParser"`
+	Kills       *int     `selector:"td:nth-child(5) > span > span"                                         parser:"intToPtrParser"`
+	Deaths      *int     `selector:"td:nth-child(6) > span > span:nth-child(2) > span"                     parser:"intToPtrParser"`
+	Assists     *int     `selector:"td:nth-child(7) > span > span"                                         parser:"intToPtrParser"`
+	Kast        *float64 `selector:"td:nth-child(9) > span > span"                                         parser:"floatToPtrParser"`
+	Adr         *float64 `selector:"td:nth-child(10) > span > span"                                        parser:"floatToPtrParser"`
+	Hs          *float64 `selector:"td:nth-child(11) > span > span"                                        parser:"floatToPtrParser"`
+	FirstKills  *int     `selector:"td:nth-child(12) > span > span"                                        parser:"intToPtrParser"`
+	FirstDeaths *int     `selector:"td:nth-child(13) > span > span"                                        parser:"intToPtrParser"`
 }
 
 func initPlayerOverviewStatSchema(
@@ -106,6 +107,19 @@ func NewPlayerOverviewStatScraper(
 		Conn:                   conn,
 		Tx:                     tx,
 	}
+}
+
+func (p *PlayerOverviewStatScraper) agentParser(rawVal string) (any, error) {
+	agentName := strings.TrimSpace(rawVal)
+	fmt.Println(agentName)
+	var agentId int
+
+	row := p.Conn.QueryRow("SELECT id FROM agents WHERE name = ?", agentName)
+	if err := row.Scan(&agentId); err != nil {
+		return nil, err
+	}
+
+	return agentId, nil
 }
 
 func floatToPtrParser(rawVal string) (any, error) {
@@ -240,6 +254,7 @@ func (p *PlayerOverviewStatScraper) Scrape() error {
 	parsers := map[string]htmlx.Parser{
 		"intToPtrParser":   intToPtrParser,
 		"floatToPtrParser": floatToPtrParser,
+		"agentParser":      p.agentParser,
 	}
 
 	logrus.Debug("Parsing player def stats")

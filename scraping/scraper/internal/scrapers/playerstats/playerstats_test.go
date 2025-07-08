@@ -1,13 +1,28 @@
 package playerstats
 
 import (
+	"database/sql"
 	"net/http"
+	"os"
 	"testing"
 
 	"github.com/PuerkitoBio/goquery"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 func TestPlayerStat(t *testing.T) {
+
+	dbPath := "/home/leminhohoho/repos/vlr-prediction/database/vlr.db"
+	if _, err := os.Stat(dbPath); os.IsNotExist(err) {
+		t.Fatalf("Database file does not exist: %s", dbPath)
+	}
+
+	conn, err := sql.Open("sqlite3", dbPath)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
 	res, err := http.Get(
 		"https://www.vlr.gg/490310/paper-rex-vs-gen-g-champions-tour-2025-masters-toronto-r2-1-0",
 	)
@@ -25,7 +40,7 @@ func TestPlayerStat(t *testing.T) {
 	)
 
 	forsakenOverviewStatScraper := NewPlayerOverviewStatScraper(
-		nil,
+		conn,
 		nil,
 		forsakenOverviewStatNode,
 		490310,
@@ -49,7 +64,7 @@ func TestPlayerStat(t *testing.T) {
 	)
 
 	d4v4iOverviewStatScraper := NewPlayerOverviewStatScraper(
-		nil,
+		conn,
 		nil,
 		d4v4iOverviewStatNode,
 		490310,
