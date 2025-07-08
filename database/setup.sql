@@ -90,6 +90,7 @@ CREATE TABLE IF NOT EXISTS player_overview_stats (
     team_id INTEGER NOT NULL,
     player_id INTEGER NOT NULL,
     side TEXT NOT NULL CHECK(side IN ('def', 'atk')),
+    agent_id INTEGER NOT NULL,
     rating REAL NOT NULL CHECK(rating >= 0),
     acs FLOAT NOT NULL CHECK(acs >= 0),
     kills INTEGER NOT NULL,
@@ -103,6 +104,7 @@ CREATE TABLE IF NOT EXISTS player_overview_stats (
 
     FOREIGN KEY (match_id) REFERENCES matches(id),
     FOREIGN KEY (map_id) REFERENCES maps(id),
+    FOREIGN KEY (agent_id) REFERENCES agents(id),
     FOREIGN KEY (team_id) REFERENCES teams(id),
     FOREIGN KEY (player_id) REFERENCES players(id)
 );
