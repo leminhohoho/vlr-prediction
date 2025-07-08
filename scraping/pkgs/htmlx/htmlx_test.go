@@ -17,18 +17,22 @@ type BanPickLog struct {
 	Value string `selector:"#wrapper > div.col-container > div.col.mod-3 > div.wf-card.mod-color.mod-bg-after-striped_purple.match-header > div.match-header-note"`
 }
 
+type TeamInfo struct {
+	Team1Name  string `selector:"#wrapper > div.col-container > div.col.mod-3 > div.wf-card.mod-color.mod-bg-after-striped_purple.match-header > div.match-header-vs > a.match-header-link.wf-link-hover.mod-1 > div > div.wf-title-med"`
+	Team2Name  string `selector:"#wrapper > div.col-container > div.col.mod-3 > div.wf-card.mod-color.mod-bg-after-striped_purple.match-header > div.match-header-vs > a.match-header-link.wf-link-hover.mod-2 > div > div.wf-title-med.mod-single"`
+	Team1Score int    `selector:"#wrapper > div.col-container > div.col.mod-3 > div.wf-card.mod-color.mod-bg-after-striped_purple.match-header > div.match-header-vs > div > div.match-header-vs-score > div:nth-child(1) > span.match-header-vs-score-winner"`
+	Team2Score int    `selector:"#wrapper > div.col-container > div.col.mod-3 > div.wf-card.mod-color.mod-bg-after-striped_purple.match-header > div.match-header-vs > div > div.match-header-vs-score > div:nth-child(1) > span.match-header-vs-score-loser"`
+}
+
 type MatchInfo struct {
-	Team1Name     string `selector:"#wrapper > div.col-container > div.col.mod-3 > div.wf-card.mod-color.mod-bg-after-striped_purple.match-header > div.match-header-vs > a.match-header-link.wf-link-hover.mod-1 > div > div.wf-title-med"`
-	Team2Name     string `selector:"#wrapper > div.col-container > div.col.mod-3 > div.wf-card.mod-color.mod-bg-after-striped_purple.match-header > div.match-header-vs > a.match-header-link.wf-link-hover.mod-2 > div > div.wf-title-med.mod-single"`
-	Team1Score    int    `selector:"#wrapper > div.col-container > div.col.mod-3 > div.wf-card.mod-color.mod-bg-after-striped_purple.match-header > div.match-header-vs > div > div.match-header-vs-score > div:nth-child(1) > span.match-header-vs-score-winner"`
-	Team2Score    int    `selector:"#wrapper > div.col-container > div.col.mod-3 > div.wf-card.mod-color.mod-bg-after-striped_purple.match-header > div.match-header-vs > div > div.match-header-vs-score > div:nth-child(1) > span.match-header-vs-score-loser"`
-	TournamentURL string `selector:"#wrapper > div.col-container > div.col.mod-3 > div.wf-card.mod-color.mod-bg-after-striped_purple.match-header > div.match-header-super > div:nth-child(1) > a"                                                                source:"attr=href"`
+	TeamInfo
+	TournamentURL string `selector:"#wrapper > div.col-container > div.col.mod-3 > div.wf-card.mod-color.mod-bg-after-striped_purple.match-header > div.match-header-super > div:nth-child(1) > a"                                        source:"attr=href"`
 	TeamWonBet    *int   `selector:"#wrapper > div.col-container > div.col.mod-3 > div:nth-child(2) > a:nth-child(2) > div > div.match-bet-item-team > span:nth-child(4)"`
 	BanPickLog    BanPickLog
-	PatchNo       float64 `selector:"#wrapper > div.col-container > div.col.mod-3 > div.wf-card.mod-color.mod-bg-after-striped_purple.match-header > div.match-header-super > div:nth-child(2) > div > div:nth-child(3) > div"                                                        parser:"patchNo"`
+	PatchNo       float64 `selector:"#wrapper > div.col-container > div.col.mod-3 > div.wf-card.mod-color.mod-bg-after-striped_purple.match-header > div.match-header-super > div:nth-child(2) > div > div:nth-child(3) > div"                                parser:"patchNo"`
 	Skibidi       any
-	NullContent   int  `selector:"#wrapper > div.col-container > div.col.mod-3 > div.wf-card.mod-color.mod-bg-after-striped_purple.match-header > div.match-header-super > div:nth-child(2) > div > div:nth-child(3) > div > div > div"                                            parser:"nullParser"`
-	NullPtr       *int `selector:"#wrapper > div.col-container > div.col.mod-3 > div.wf-card.mod-color.mod-bg-after-striped_purple.match-header > div.match-header-super > div:nth-child(2) > div > div:nth-child(3) > div > div > div"                                            parser:"nullPtrParser"`
+	NullContent   int  `selector:"#wrapper > div.col-container > div.col.mod-3 > div.wf-card.mod-color.mod-bg-after-striped_purple.match-header > div.match-header-super > div:nth-child(2) > div > div:nth-child(3) > div > div > div"                    parser:"nullParser"`
+	NullPtr       *int `selector:"#wrapper > div.col-container > div.col.mod-3 > div.wf-card.mod-color.mod-bg-after-striped_purple.match-header > div.match-header-super > div:nth-child(2) > div > div:nth-child(3) > div > div > div"                    parser:"nullPtrParser"`
 }
 
 func TestHTMLxPrimitiveTypes(t *testing.T) {

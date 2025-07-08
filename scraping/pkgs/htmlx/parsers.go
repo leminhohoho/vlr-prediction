@@ -23,7 +23,7 @@ func StringParserClean(rawVal string) (any, error) {
 // Return integer value of the content
 func IntParser(rawVal string) (any, error) {
 	trimmedRawVal := strings.TrimSpace(rawVal)
-	if !regexp.MustCompile(`^[a-zA-Z$%]?\s*[0-9]+\s*[a-zA-Z$%]?`).MatchString(trimmedRawVal) {
+	if !regexp.MustCompile(`^[a-zA-Z$%]?\s*[0-9]+\s*[a-zA-Z$%]?$`).MatchString(trimmedRawVal) {
 		return nil, fmt.Errorf("%s is not valid for parsing to integer", trimmedRawVal)
 	}
 
@@ -39,7 +39,7 @@ func IntParser(rawVal string) (any, error) {
 // Return float value of the content
 func FloatParser(rawVal string) (any, error) {
 	trimmedRawVal := strings.TrimSpace(rawVal)
-	if !regexp.MustCompile(`^[a-zA-Z$%]?\s*-?\d+(?:[,.]\d+)*(\.\d+)?\s*[a-zA-Z$%]$`).
+	if !regexp.MustCompile(`^[a-zA-Z$%]?\s*-?\d+(?:[,.]\d+)*(\.\d+)?\s*[a-zA-Z$%]?$`).
 		MatchString(trimmedRawVal) {
 		return nil, fmt.Errorf("%s is not valid for parsing to float", trimmedRawVal)
 	}
