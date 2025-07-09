@@ -150,9 +150,13 @@ DROP TABLE IF EXISTS players;
 CREATE TABLE IF NOT EXISTS players (
     id INTEGER PRIMARY KEY,
     name TEXT NOT NULL,
+    country_id INTEGER,
     url TEXT UNIQUE NOT NULL,
-    img_url TEXT
+    img_url TEXT,
+
+    FOREIGN KEY (country_id) REFERENCES countries(id)
 );
+
 
 DROP TABLE IF EXISTS teams;
 CREATE TABLE IF NOT EXISTS teams (
@@ -161,8 +165,10 @@ CREATE TABLE IF NOT EXISTS teams (
     shorthand_name TEXT NOT NULL,
     url TEXT UNIQUE NOT NULL,
     img_url TEXT,
-    region_id INTEGER NOT NULL,
+    country_id INTEGER,
+    region_id INTEGER,
 
+    FOREIGN KEY (country_id) REFERENCES countries(id)
     FOREIGN KEY (region_id) REFERENCES regions(id)
 );
 
@@ -180,6 +186,15 @@ CREATE TABLE IF NOT EXISTS maps_pool (
     map_id INTEGER NOT NULL,
 
     FOREIGN KEY (map_id) REFERENCES maps(id)
+);
+
+DROP TABLE IF EXISTS countries;
+CREATE TABLE IF NOT EXISTS countries (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL,
+    region_id INTEGER NOT NULL,
+
+    FOREIGN KEY (region_id) REFERENCES regions(id)
 );
 
 DROP TABLE IF EXISTS regions;
@@ -353,13 +368,6 @@ INSERT OR IGNORE INTO agents(name, agent_type, release_date) VALUES
 ('Yoru', 'duelist', '2021-01-12'),
 ('Tejo', 'initiator', '2025-01-08'),
 ('Waylay', 'duelist', '2025-03-04');
-
-INSERT OR IGNORE INTO regions(name) VALUES
-('Americas'),
-('EMEA'),
-('Pacific'),
-('China'),
-('International');
 
 SELECT * FROM maps;
 SELECT * FROM agents;
