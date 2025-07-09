@@ -1,28 +1,23 @@
 package playerstats
 
 import (
-	"database/sql"
 	"net/http"
-	"os"
 	"testing"
 
 	"github.com/PuerkitoBio/goquery"
+	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/helpers"
 	_ "github.com/mattn/go-sqlite3"
 )
 
 func TestPlayerStat(t *testing.T) {
 
 	dbPath := "/home/leminhohoho/repos/vlr-prediction/database/vlr.db"
-	if _, err := os.Stat(dbPath); os.IsNotExist(err) {
-		t.Fatalf("Database file does not exist: %s", dbPath)
-	}
-
-	conn, err := sql.Open("sqlite3", dbPath)
-
+	conn, err := helpers.GetConn(dbPath)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer conn.Close()
+
 	res, err := http.Get(
 		"https://www.vlr.gg/490310/paper-rex-vs-gen-g-champions-tour-2025-masters-toronto-r2-1-0",
 	)

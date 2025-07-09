@@ -1,7 +1,9 @@
 package helpers
 
 import (
+	"database/sql"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 )
@@ -130,4 +132,17 @@ func FillPlayerPerKillStat(
 
 		return defStat, &filledStat, nil
 	}
+}
+
+func GetConn(dbPath string) (*sql.DB, error) {
+	if _, err := os.Stat(dbPath); os.IsNotExist(err) {
+		return nil, fmt.Errorf("Database file does not exist: %s", dbPath)
+	}
+
+	conn, err := sql.Open("sqlite3", dbPath)
+	if err != nil {
+		return nil, err
+	}
+
+	return conn, nil
 }
