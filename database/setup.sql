@@ -150,6 +150,7 @@ DROP TABLE IF EXISTS players;
 CREATE TABLE IF NOT EXISTS players (
     id INTEGER PRIMARY KEY,
     name TEXT NOT NULL,
+    real_name TEXT,
     country_id INTEGER,
     url TEXT UNIQUE NOT NULL,
     img_url TEXT,
