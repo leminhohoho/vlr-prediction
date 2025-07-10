@@ -41,7 +41,6 @@ func TestPlayerStat(t *testing.T) {
 		490310,
 		624,
 		17,
-		9801,
 		12,
 		4,
 	)
@@ -65,7 +64,6 @@ func TestPlayerStat(t *testing.T) {
 		490310,
 		624,
 		17,
-		9803,
 		12,
 		4,
 	)

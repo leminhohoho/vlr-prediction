@@ -8,6 +8,7 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/leminhohoho/vlr-prediction/scraping/pkgs/htmlx"
+	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/customparsers"
 	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/helpers"
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
@@ -24,7 +25,7 @@ type PlayerOverviewStatSchema struct {
 	MatchId     int
 	MapId       int
 	TeamId      int
-	PlayerId    int
+	PlayerId    int `selector:"td.mod-player > div > a"                           source:"attr=href"  parser:"playerIdParser"`
 	Side        Side
 	AgentId     int      `selector:"td.mod-agents > div > span > img"                  source:"attr=title" parser:"agentParser"`
 	Rating      *float64 `selector:"td:nth-child(3) > span > span"                                         parser:"floatToPtrParser"`
@@ -42,8 +43,7 @@ type PlayerOverviewStatSchema struct {
 func initPlayerOverviewStatSchema(
 	matchId,
 	mapId,
-	teamId,
-	playerId int,
+	teamId int,
 	side Side,
 ) PlayerOverviewStatSchema {
 	var rating, acs, kast, adr, hs float64
@@ -53,7 +53,6 @@ func initPlayerOverviewStatSchema(
 		MatchId:     matchId,
 		MapId:       mapId,
 		TeamId:      teamId,
-		PlayerId:    playerId,
 		Side:        side,
 		Rating:      &rating,
 		Acs:         &acs,
@@ -90,16 +89,15 @@ func NewPlayerOverviewStatScraper(
 	matchId int,
 	mapId int,
 	teamId int,
-	playerId int,
 	// NOTE: def and atk rounds here include OT rounds also
 	teamDefRounds int,
 	teamAtkRounds int,
 ) *PlayerOverviewStatScraper {
 	return &PlayerOverviewStatScraper{
 		Data: Data{
-			DefStat:      initPlayerOverviewStatSchema(matchId, mapId, teamId, playerId, Def),
-			AtkStat:      initPlayerOverviewStatSchema(matchId, mapId, teamId, playerId, Atk),
-			BothSideStat: initPlayerOverviewStatSchema(matchId, mapId, teamId, playerId, Side("")),
+			DefStat:      initPlayerOverviewStatSchema(matchId, mapId, teamId, Def),
+			AtkStat:      initPlayerOverviewStatSchema(matchId, mapId, teamId, Atk),
+			BothSideStat: initPlayerOverviewStatSchema(matchId, mapId, teamId, Side("")),
 		},
 		PlayerOverviewStatNode: playerOverviewStatNode,
 		TeamDefRounds:          teamDefRounds,
@@ -255,6 +253,7 @@ func (p *PlayerOverviewStatScraper) Scrape() error {
 		"intToPtrParser":   intToPtrParser,
 		"floatToPtrParser": floatToPtrParser,
 		"agentParser":      p.agentParser,
+		"playerIdParser":   customparsers.IdParser,
 	}
 
 	logrus.Debug("Parsing player def stats")

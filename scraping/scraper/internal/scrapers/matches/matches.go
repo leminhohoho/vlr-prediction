@@ -11,8 +11,8 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/leminhohoho/vlr-prediction/scraping/pkgs/htmlx"
+	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/customparsers"
 	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/helpers"
-	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/utils/urlinfo"
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
@@ -29,10 +29,10 @@ type MatchSchema struct {
 	Id           int
 	Url          string
 	Date         time.Time
-	TournamentId int   `selector:"#wrapper > div.col-container > div.col.mod-3 > div.wf-card.match-header > div.match-header-super > div:nth-child(1) > a"                                                                             source:"attr=href" parser:"urlParser"`
+	TournamentId int   `selector:"#wrapper > div.col-container > div.col.mod-3 > div.wf-card.match-header > div.match-header-super > div:nth-child(1) > a"                                                                             source:"attr=href" parser:"idParser"`
 	Stage        Stage `selector:"#wrapper > div.col-container > div.col.mod-3 > div.wf-card.mod-color.mod-bg-after-striped_purple.match-header > div.match-header-super > div:nth-child(1) > a > div > div.match-header-event-series"                    parser:"stageParser"`
-	Team1Id      int   `selector:"#wrapper > div.col-container > div.col.mod-3 > div.wf-card.match-header > div.match-header-vs > a.match-header-link.wf-link-hover.mod-1"                                                             source:"attr=href" parser:"urlParser"`
-	Team2Id      int   `selector:"#wrapper > div.col-container > div.col.mod-3 > div.wf-card.match-header > div.match-header-vs > a.match-header-link.wf-link-hover.mod-2"                                                             source:"attr=href" parser:"urlParser"`
+	Team1Id      int   `selector:"#wrapper > div.col-container > div.col.mod-3 > div.wf-card.match-header > div.match-header-vs > a.match-header-link.wf-link-hover.mod-1"                                                             source:"attr=href" parser:"idParser"`
+	Team2Id      int   `selector:"#wrapper > div.col-container > div.col.mod-3 > div.wf-card.match-header > div.match-header-vs > a.match-header-link.wf-link-hover.mod-2"                                                             source:"attr=href" parser:"idParser"`
 	Team1Score   int   `selector:"#wrapper > div.col-container > div.col.mod-3 > div.wf-card.match-header > div.match-header-vs > div > div.match-header-vs-score > div:nth-child(1) > span.match-header-vs-score-winner"`
 	Team2Score   int   `selector:"#wrapper > div.col-container > div.col.mod-3 > div.wf-card.match-header > div.match-header-vs > div > div.match-header-vs-score > div:nth-child(1) > span.match-header-vs-score-loser"`
 	Team1Rating  int   `selector:"#wrapper > div.col-container > div.col.mod-3 > div.wf-card.match-header > div.match-header-vs > a.match-header-link.wf-link-hover.mod-1 > div > div.match-header-link-name-elo"                                         parser:"ratingParser"`
@@ -64,16 +64,6 @@ func NewMatchScraper(
 		Conn:             conn,
 		Tx:               tx,
 	}
-}
-
-func urlParser(rawVal string) (any, error) {
-	url := strings.TrimSpace(rawVal)
-	vlrUrlInfo, err := urlinfo.ExtractUrlInfo(url)
-	if err != nil {
-		return nil, err
-	}
-
-	return vlrUrlInfo.Id, nil
 }
 
 func stageParser(rawVal string) (any, error) {
@@ -118,7 +108,7 @@ func (m *MatchScraper) PrettyPrint() error {
 func (m *MatchScraper) Scrape() error {
 	logrus.Debug("Parsing information from match html content into match schema")
 	parsers := map[string]htmlx.Parser{
-		"urlParser":    urlParser,
+		"idParser":     customparsers.IdParser,
 		"stageParser":  stageParser,
 		"ratingParser": ratingParser,
 	}
