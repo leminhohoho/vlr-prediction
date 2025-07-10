@@ -116,12 +116,13 @@ CREATE TABLE IF NOT EXISTS player_highlights (
     round_no INTEGER NOT NULL CHECK(round_no > 0),
     team_id INTEGER NOT NULL,
     player_id INTEGER NOT NULL,
-    role TEXT NOT NULL CHECK(role IN ('maker', 'receiver')),
-    type TEXT NOT NULL CHECK(type IN ('2k', '3k', '4k', '5k', '1v1', '1v2', '1v3', '1v4', '1v5')),
+    highlight_type TEXT NOT NULL CHECK(highlight_type IN ('2k', '3k', '4k', '5k', '1v1', '1v2', '1v3', '1v4', '1v5')),
+    player_against_id INTEGER NOT NULL,
 
     FOREIGN KEY (match_id) REFERENCES matches(id),
     FOREIGN KEY (map_id) REFERENCES maps(id),
-    FOREIGN KEY (player_id) REFERENCES players(id)
+    FOREIGN KEY (player_id) REFERENCES players(id),
+    FOREIGN KEY (player_against_id) REFERENCES players(id)
 );
 
 DROP TABLE IF EXISTS ban_pick_log;
