@@ -20,6 +20,7 @@ type Config struct {
 	allowParseToPointer bool
 	noMissingAttributes bool
 	allowNilPointer     bool
+	noPassThroughStruct bool
 }
 
 func NewDefaultConfig() *Config {
@@ -77,6 +78,13 @@ func SetNoMissingAttributes(forbid bool) Option {
 func SetAllowNilPointer(allow bool) Option {
 	return func(c *Config) {
 		c.allowNilPointer = allow
+	}
+}
+
+// Forbid the parser from accessing inner structs
+func SetNoPassThroughStruct(forbid bool) Option {
+	return func(c *Config) {
+		c.noPassThroughStruct = forbid
 	}
 }
 
@@ -243,9 +251,12 @@ func parseFromReflectValue(
 		fieldVal := v.Field(i)
 
 		if fieldVal.Kind() == reflect.Struct && !isStructToParse(fieldVal) {
-			if err = parseFromReflectValue(fieldVal, sel, config); err != nil {
-				return fmt.Errorf("Error parsing value to field '%s' : %s", fieldType.Name, err.Error())
+			if !config.noPassThroughStruct {
+				if err = parseFromReflectValue(fieldVal, sel, config); err != nil {
+					return fmt.Errorf("Error parsing value to field '%s' : %s", fieldType.Name, err.Error())
+				}
 			}
+
 			continue
 		}
 		htmlxTags, err := initializeHtmlxTags(fieldType)
