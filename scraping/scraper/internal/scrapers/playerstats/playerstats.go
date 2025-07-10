@@ -71,6 +71,7 @@ type Data struct {
 	DefStat      PlayerOverviewStatSchema
 	AtkStat      PlayerOverviewStatSchema
 	BothSideStat PlayerOverviewStatSchema
+	PlayerName   string `selector:"td.mod-player > div > a > div:nth-child(1)"`
 }
 
 type PlayerOverviewStatScraper struct {
@@ -109,7 +110,6 @@ func NewPlayerOverviewStatScraper(
 
 func (p *PlayerOverviewStatScraper) agentParser(rawVal string) (any, error) {
 	agentName := strings.TrimSpace(rawVal)
-	fmt.Println(agentName)
 	var agentId int
 
 	row := p.Conn.QueryRow("SELECT id FROM agents WHERE name = ?", agentName)
@@ -225,20 +225,12 @@ func (p *PlayerOverviewStatScraper) fillStats() error {
 }
 
 func (p *PlayerOverviewStatScraper) PrettyPrint() error {
-	defJsonStr, err := json.MarshalIndent(p.Data.DefStat, "", "	")
+	jsonStr, err := json.MarshalIndent(p.Data, "", "	")
 	if err != nil {
 		return err
 	}
 
-	atkJsonStr, err := json.MarshalIndent(p.Data.AtkStat, "", "	")
-	if err != nil {
-		return err
-	}
-
-	fmt.Println("Def stat:")
-	fmt.Println(string(defJsonStr))
-	fmt.Println("Atk stat:")
-	fmt.Println(string(atkJsonStr))
+	fmt.Println(string(jsonStr))
 
 	return nil
 }
@@ -246,6 +238,11 @@ func (p *PlayerOverviewStatScraper) PrettyPrint() error {
 func (p *PlayerOverviewStatScraper) Scrape() error {
 	defPlayerOverviewStatNode, atkPlayerOverviewStatNode, bothSidePlayerOverviewStatNode, err := p.splitNode()
 	if err != nil {
+		return err
+	}
+
+	logrus.Debug("Parsing player name")
+	if err := htmlx.ParseFromSelection(&p.Data, defPlayerOverviewStatNode, htmlx.SetNoPassThroughStruct(true)); err != nil {
 		return err
 	}
 
