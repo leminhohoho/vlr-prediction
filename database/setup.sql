@@ -128,9 +128,9 @@ CREATE TABLE IF NOT EXISTS player_highlights (
 DROP TABLE IF EXISTS ban_pick_log;
 CREATE TABLE IF NOT EXISTS ban_pick_log (
     match_id INTEGER NOT NULL,
-    team_id INTEGER NOT NULL,
+    team_id INTEGER,
     map_id INTEGER NOT NULL,
-    action TEXT NOT NULL CHECK(action IN ('ban', 'pick')),
+    action TEXT NOT NULL CHECK(action IN ('ban', 'pick', 'remain')),
     ban_pick_order INTEGER NOT NULL CHECK(ban_pick_order >= 0),
 
     FOREIGN KEY (match_id) REFERENCES matches(id),
