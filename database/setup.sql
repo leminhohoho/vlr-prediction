@@ -164,7 +164,7 @@ DROP TABLE IF EXISTS teams;
 CREATE TABLE IF NOT EXISTS teams (
     id INTEGER PRIMARY KEY,
     name TEXT NOT NULL,
-    shorthand_name TEXT NOT NULL,
+    shorthand_name TEXT,
     url TEXT UNIQUE NOT NULL,
     img_url TEXT,
     country_id INTEGER,
