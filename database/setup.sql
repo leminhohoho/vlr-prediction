@@ -193,7 +193,7 @@ CREATE TABLE IF NOT EXISTS maps_pool (
 DROP TABLE IF EXISTS countries;
 CREATE TABLE IF NOT EXISTS countries (
     id INTEGER PRIMARY KEY,
-    name TEXT NOT NULL,
+    name TEXT UNIQUE NOT NULL,
     region_id INTEGER NOT NULL,
 
     FOREIGN KEY (region_id) REFERENCES regions(id)
