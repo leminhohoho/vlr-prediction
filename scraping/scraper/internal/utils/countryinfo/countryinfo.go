@@ -1,19 +1,17 @@
 package countryinfo
 
 import (
-	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
+	"os"
+	"strings"
+
+	"github.com/gocarina/gocsv"
+	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/helpers"
 )
 
-type NameInfo struct {
-	Name string `json:"common"`
-}
-
 type CountryInfo struct {
-	Name       NameInfo `json:"name"`
-	RegionName string   `json:"region"`
+	Name       string `csv:"country"`
+	RegionName string `csv:"continent"`
 }
 
 type CountriesInfo struct {
@@ -21,27 +19,29 @@ type CountriesInfo struct {
 }
 
 func GetCountryInfo(countryName string) (CountryInfo, error) {
-	var countryInfo CountryInfo
+	var countriesInfo []*CountryInfo
+	countriesDbPath := os.Getenv("COUNTRIES_DB_PATH")
 
-	res, err := http.Get("https://restcountries.com/v3.1/name/" + countryName)
+	if countriesDbPath == "" {
+		return CountryInfo{}, fmt.Errorf("Can't find the countries database")
+	}
+
+	countryDb, err := os.Open(countriesDbPath)
 	if err != nil {
-		return countryInfo, err
+		return CountryInfo{}, err
+	}
+	defer countryDb.Close()
+
+	if err := gocsv.UnmarshalFile(countryDb, &countriesInfo); err != nil {
+		return CountryInfo{}, err
 	}
 
-	dat, err := io.ReadAll(res.Body)
-	if err != nil {
-		return countryInfo, err
+	for _, countryInfo := range countriesInfo {
+		countryOfficialName := helpers.ToSnakeCase(countryInfo.Name)
+		if strings.Contains(countryOfficialName, helpers.ToSnakeCase(countryName)) {
+			return *countryInfo, nil
+		}
 	}
 
-	var countriesInfo CountriesInfo
-
-	if err := json.Unmarshal(dat, &countriesInfo.Data); err != nil {
-		return countryInfo, err
-	}
-
-	if len(countriesInfo.Data) == 0 {
-		return countryInfo, fmt.Errorf("Country info is empty")
-	}
-
-	return countriesInfo.Data[0], err
+	return CountryInfo{}, fmt.Errorf("Country name doesn't match any thing in the DB")
 }

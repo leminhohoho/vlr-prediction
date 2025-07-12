@@ -1,36 +1,27 @@
 package players
 
 import (
-	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/leminhohoho/vlr-prediction/scraping/pkgs/htmlx"
+	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/models"
+	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/utils/countryinfo"
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
 
-type PlayerSchema struct {
-	Id        int
-	Name      string  `selector:"#wrapper > div.col-container > div > div.wf-card.mod-header.mod-full > div.player-header > div:nth-child(2) > div:nth-child(1) > h1"`
-	RealName  *string `selector:"#wrapper > div.col-container > div > div.wf-card.mod-header.mod-full > div.player-header > div:nth-child(2) > div:nth-child(1) > h2" parser:"realNameParser"`
-	Url       string
-	ImgUrl    *string `selector:"#wrapper > div.col-container > div > div.wf-card.mod-header.mod-full > div.player-header > div.wf-avatar.mod-player > div > img"     parser:"imgUrlParser"    source:"attr=src"`
-	CountryId *int    `selector:"#wrapper > div.col-container > div > div.wf-card.mod-header.mod-full > div.player-header > div:nth-child(2) > div.ge-text-light"     parser:"countryIdParser"`
-}
-
 type PlayerScraper struct {
-	Data              PlayerSchema
+	Data              models.PlayerSchema
 	PlayerPageContent *goquery.Selection
-	Conn              *sql.DB
-	Tx                *gorm.Tx
+	Tx                *gorm.DB
 }
 
 func NewPlayerScraper(
-	conn *sql.DB,
-	tx *gorm.Tx,
+	tx *gorm.DB,
 	playerPageContent *goquery.Selection,
 	playerId int,
 	playerUrl string,
@@ -39,7 +30,7 @@ func NewPlayerScraper(
 	var countryId int
 
 	return &PlayerScraper{
-		Data: PlayerSchema{
+		Data: models.PlayerSchema{
 			Id:        playerId,
 			Url:       playerUrl,
 			RealName:  &realName,
@@ -48,7 +39,6 @@ func NewPlayerScraper(
 		},
 		PlayerPageContent: playerPageContent,
 		Tx:                tx,
-		Conn:              conn,
 	}
 }
 
@@ -72,16 +62,40 @@ func imgUrlParser(rawVal string) (any, error) {
 	return &imgUrlStr, nil
 }
 
-func getCountryId(conn *sql.DB, countryName string) (int, error) {
-	var id int
+func (p *PlayerScraper) getCountryId(countryName string) (int, error) {
+	var countryRow models.CountrySchema
 
-	row := conn.QueryRow("SELECT id FROM countries WHERE name = ?", countryName)
-
-	if err := row.Scan(&id); err != nil {
-		return -1, err
+	result := p.Tx.Table("countries").Where("name = ?", countryName).First(&countryRow)
+	if result.Error != nil {
+		return -1, result.Error
 	}
 
-	return id, nil
+	return countryRow.Id, nil
+}
+
+func (p *PlayerScraper) addCountryInfo(countryOfficialName, regionOfficialName string) (int, error) {
+	regionRow := models.RegionSchema{Name: regionOfficialName}
+	regionResult := p.Tx.Table("regions").Create(&regionRow)
+	if regionResult.Error != nil {
+		if !strings.Contains(regionResult.Error.Error(), "UNIQUE constraint failed") {
+			p.Tx.Rollback()
+			return -1, regionResult.Error
+		}
+
+		regionResult = p.Tx.Table("regions").Where("name = ?", regionOfficialName).First(&regionRow)
+		if regionResult.Error != nil {
+			return -1, regionResult.Error
+		}
+	}
+
+	countryRow := models.CountrySchema{Name: countryOfficialName, RegionId: regionRow.Id}
+	countryResult := p.Tx.Table("countries").Create(&countryRow)
+	if countryResult.Error != nil {
+		p.Tx.Rollback()
+		return -1, countryResult.Error
+	}
+
+	return countryRow.Id, nil
 }
 
 func (p *PlayerScraper) countryIdParser(rawVal string) (any, error) {
@@ -91,16 +105,27 @@ func (p *PlayerScraper) countryIdParser(rawVal string) (any, error) {
 		return nil, nil
 	}
 
-	fmt.Printf("Player country: %s\n", countryName)
-
-	countryId, err := getCountryId(p.Conn, countryName)
+	countryInfo, err := countryinfo.GetCountryInfo(countryName)
 	if err != nil {
-		if err != sql.ErrNoRows {
+		return -1, err
+	}
+
+	countryOfficialName := countryInfo.Name
+	regionOfficialName := countryInfo.RegionName
+
+	countryId, err := p.getCountryId(countryOfficialName)
+	if err != nil {
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, err
 		}
 
 		// TODO: Add code for inserting into (the line below is placeholder)
-		return nil, nil
+		countryId, err := p.addCountryInfo(countryOfficialName, regionOfficialName)
+		if err != nil {
+			return nil, err
+		}
+
+		return &countryId, nil
 	}
 
 	return &countryId, nil

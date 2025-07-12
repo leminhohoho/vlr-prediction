@@ -4,10 +4,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"testing"
+
+	"github.com/joho/godotenv"
 )
 
 func TestCountryInfo(t *testing.T) {
-	countries := []string{"Singapore", "RUSSIA", "canada", "USA", "Vietnam"}
+	if err := godotenv.Load("/home/leminhohoho/repos/vlr-prediction/scraping/scraper/.env"); err != nil {
+		t.Fatal(err)
+	}
+
+	countries := []string{"Singapore", "RUSSIA", "canada", "United States", "Vietnam"}
 
 	for _, country := range countries {
 		countryInfo, err := GetCountryInfo(country)
