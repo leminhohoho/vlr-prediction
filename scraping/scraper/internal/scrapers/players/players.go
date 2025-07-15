@@ -9,7 +9,7 @@ import (
 	"github.com/PuerkitoBio/goquery"
 	"github.com/leminhohoho/vlr-prediction/scraping/pkgs/htmlx"
 	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/models"
-	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/utils/countryinfo"
+	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/utils/geographyinfo"
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
@@ -105,13 +105,13 @@ func (p *PlayerScraper) countryIdParser(rawVal string) (any, error) {
 		return nil, nil
 	}
 
-	countryInfo, err := countryinfo.GetCountryInfo(countryName)
+	countryInfo, err := geographyinfo.GetInfoFromCountryName(countryName)
 	if err != nil {
 		return -1, err
 	}
 
-	countryOfficialName := countryInfo.Name
-	regionOfficialName := countryInfo.RegionName
+	countryOfficialName := countryInfo.Country
+	regionOfficialName := countryInfo.Region
 
 	countryId, err := p.getCountryId(countryOfficialName)
 	if err != nil {
