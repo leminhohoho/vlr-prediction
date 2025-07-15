@@ -49,6 +49,7 @@ func getTournamentId(urlStr string) int {
 type VlrUrl struct {
 	UrlType VlrDomain
 	Id      int
+	Url     *url.URL
 }
 
 func (v VlrUrl) IsMatch() bool {
@@ -79,24 +80,27 @@ func ExtractUrlInfo(urlStr string) (VlrUrl, error) {
 		return VlrUrl{
 			UrlType: Matches,
 			Id:      getMatchId(relativeUrl),
+			Url:     parsedUrl,
 		}, nil
 	} else if regexp.MustCompile(playerUrlPattern).MatchString(relativeUrl) {
 		return VlrUrl{
 			UrlType: Players,
 			Id:      getPlayerId(relativeUrl),
+			Url:     parsedUrl,
 		}, nil
 	} else if regexp.MustCompile(teamUrlPattern).MatchString(relativeUrl) {
 		return VlrUrl{
 			UrlType: Teams,
 			Id:      getTeamId(relativeUrl),
+			Url:     parsedUrl,
 		}, nil
 	} else if regexp.MustCompile(eventUrlPattern).MatchString(relativeUrl) {
 		return VlrUrl{
 			UrlType: Tournaments,
 			Id:      getTournamentId(relativeUrl),
+			Url:     parsedUrl,
 		}, nil
 	} else {
 		return VlrUrl{}, fmt.Errorf("Url is not from www.vlr.gg domain")
 	}
 }
-
