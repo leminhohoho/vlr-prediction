@@ -17,7 +17,6 @@ type Config struct {
 	parsers             map[string]Parser
 	noEmptySelection    bool
 	parseAllFields      bool
-	allowParseToPointer bool
 	noMissingAttributes bool
 	allowNilPointer     bool
 	noPassThroughStruct bool
@@ -57,13 +56,6 @@ func SetNoEmptySelection(forbid bool) Option {
 func SetParseAllFields(strict bool) Option {
 	return func(c *Config) {
 		c.parseAllFields = strict
-	}
-}
-
-// Set the parser to allow parsing the value to the type of value that the pointer points to
-func SetAllowParseToPointer(allow bool) Option {
-	return func(c *Config) {
-		c.allowParseToPointer = allow
 	}
 }
 
@@ -377,8 +369,18 @@ func parseSupportedValues(fieldVal reflect.Value, rawVal string, config *Config,
 
 		fieldVal.Set(reflect.ValueOf(dateVal))
 	default:
-		if config.allowParseToPointer && fieldVal.Kind() == reflect.Ptr {
-			return parseValue(fieldVal.Elem(), rawVal, config, htmlxTags)
+		if fieldVal.Kind() == reflect.Ptr {
+			if fieldVal.IsNil() {
+				ptr := reflect.New(fieldVal.Type().Elem())
+				if err := parseValue(ptr.Elem(), rawVal, config, htmlxTags); err != nil {
+					return err
+				}
+
+				fieldVal.Set(ptr)
+				return nil
+			} else {
+				return parseValue(fieldVal.Elem(), rawVal, config, htmlxTags)
+			}
 		}
 
 		return fmt.Errorf("Value of type %s is not supported", fieldVal.Type().String())

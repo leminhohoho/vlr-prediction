@@ -46,9 +46,7 @@ func TestHTMLxPrimitiveTypes(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var teamWonBet int
-
-	matchInfo := MatchInfo{TeamWonBet: &teamWonBet}
+	matchInfo := MatchInfo{}
 
 	parsers := map[string]Parser{
 		"patchNo": func(rawVal string) (any, error) {
@@ -66,7 +64,7 @@ func TestHTMLxPrimitiveTypes(t *testing.T) {
 		},
 	}
 
-	if err = ParseFromDocument(&matchInfo, doc, SetParsers(parsers), SetAllowParseToPointer(true), SetAllowNilPointer(true)); err != nil {
+	if err = ParseFromDocument(&matchInfo, doc, SetParsers(parsers), SetAllowNilPointer(true)); err != nil {
 		t.Fatal(err)
 	}
 
