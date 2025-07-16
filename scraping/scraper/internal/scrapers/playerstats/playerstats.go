@@ -70,7 +70,7 @@ func (p *PlayerOverviewStatScraper) agentParser(rawVal string) (any, error) {
 	agentName := strings.TrimSpace(rawVal)
 	var agent models.AgentSchema
 
-	rs := p.Tx.Table("agents").Where("name = ?", agentName).Scan(&agent)
+	rs := p.Tx.Table("agents").Where("name = ?", agentName).First(&agent)
 	if rs.Error != nil {
 		return nil, rs.Error
 	}

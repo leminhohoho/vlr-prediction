@@ -1,7 +1,6 @@
 package matches
 
 import (
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"regexp"
@@ -21,13 +20,11 @@ import (
 type MatchScraper struct {
 	Data             models.MatchSchema
 	MatchPageContent *goquery.Selection
-	Conn             *sql.DB
-	Tx               *gorm.Tx
+	Tx               *gorm.DB
 }
 
 func NewMatchScraper(
-	conn *sql.DB,
-	tx *gorm.Tx,
+	tx *gorm.DB,
 	htmlContent *goquery.Selection,
 	id int,
 	url string,
@@ -40,7 +37,6 @@ func NewMatchScraper(
 			Date: date,
 		},
 		MatchPageContent: htmlContent,
-		Conn:             conn,
 		Tx:               tx,
 	}
 }
