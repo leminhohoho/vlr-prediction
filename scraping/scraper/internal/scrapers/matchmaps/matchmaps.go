@@ -21,10 +21,10 @@ type MatchMapSchema struct {
 	Team2Id       int
 	Team1DefScore int  `selector:"div.vm-stats-game-header > div:nth-child(1) > div:nth-child(2) > span.mod-ct"`
 	Team1AtkScore int  `selector:"div.vm-stats-game-header > div:nth-child(1) > div:nth-child(2) > span.mod-t"`
-	Team1OTScore  int  `selector:"div.vm-stats-game-header > div:nth-child(1) > div:nth-child(2) > span.mod-ot"       parser:"ifNullParser"`
+	Team1OTScore  int  `selector:"div.vm-stats-game-header > div:nth-child(1) > div:nth-child(2) > span.mod-ot"`
 	Team2DefScore int  `selector:"div.vm-stats-game-header > div.team.mod-right > div:nth-child(1) > span.mod-ct"`
 	Team2AtkScore int  `selector:"div.vm-stats-game-header > div.team.mod-right > div:nth-child(1) > span.mod-t"`
-	Team2OTScore  int  `selector:"div.vm-stats-game-header > div.team.mod-right > div:nth-child(1) > span.mod-ot"     parser:"ifNullParser"`
+	Team2OTScore  int  `selector:"div.vm-stats-game-header > div.team.mod-right > div:nth-child(1) > span.mod-ot"`
 	TeamDefFirst  int  `selector:"div.vm-stats-game-header > div:nth-child(1) > div:nth-child(2) > span:nth-child(2)" parser:"defFirstParser" source:"attr=class"`
 	TeamPick      *int `selector:"div.vm-stats-game-header > div.map > div:nth-child(1) > span > span.picked"         parser:"teamPickParser" source:"attr=class"`
 }
@@ -108,7 +108,6 @@ func (m *MatchMapScraper) PrettyPrint() error {
 func (m *MatchMapScraper) Scrape() error {
 	logrus.Debug("Parsing information from map html content into match map schema")
 	parsers := map[string]htmlx.Parser{
-		"ifNullParser":   htmlx.IfNullParser(0, htmlx.IntParser),
 		"defFirstParser": m.defFirstParser,
 		"durationParser": durationParser,
 		"teamPickParser": m.teamPickParser,
@@ -117,8 +116,6 @@ func (m *MatchMapScraper) Scrape() error {
 	if err := htmlx.ParseFromSelection(
 		&m.Data, m.MapOverviewNode,
 		htmlx.SetParsers(parsers),
-		htmlx.SetAllowParseToPointer(true),
-		htmlx.SetAllowNilPointer(true),
 	); err != nil {
 		return err
 	}

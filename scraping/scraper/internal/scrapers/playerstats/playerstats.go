@@ -25,19 +25,19 @@ type PlayerOverviewStatSchema struct {
 	MatchId     int
 	MapId       int
 	TeamId      int
-	PlayerId    int `selector:"td.mod-player > div > a"                           source:"attr=href"  parser:"playerIdParser"`
 	Side        Side
+	PlayerId    int      `selector:"td.mod-player > div > a"                           source:"attr=href"  parser:"playerIdParser"`
 	AgentId     int      `selector:"td.mod-agents > div > span > img"                  source:"attr=title" parser:"agentParser"`
-	Rating      *float64 `selector:"td:nth-child(3) > span > span"                                         parser:"floatToPtrParser"`
-	Acs         *float64 `selector:"td:nth-child(4) > span > span"                                         parser:"floatToPtrParser"`
-	Kills       *int     `selector:"td:nth-child(5) > span > span"                                         parser:"intToPtrParser"`
-	Deaths      *int     `selector:"td:nth-child(6) > span > span:nth-child(2) > span"                     parser:"intToPtrParser"`
-	Assists     *int     `selector:"td:nth-child(7) > span > span"                                         parser:"intToPtrParser"`
-	Kast        *float64 `selector:"td:nth-child(9) > span > span"                                         parser:"floatToPtrParser"`
-	Adr         *float64 `selector:"td:nth-child(10) > span > span"                                        parser:"floatToPtrParser"`
-	Hs          *float64 `selector:"td:nth-child(11) > span > span"                                        parser:"floatToPtrParser"`
-	FirstKills  *int     `selector:"td:nth-child(12) > span > span"                                        parser:"intToPtrParser"`
-	FirstDeaths *int     `selector:"td:nth-child(13) > span > span"                                        parser:"intToPtrParser"`
+	Rating      *float64 `selector:"td:nth-child(3) > span > span"`
+	Acs         *float64 `selector:"td:nth-child(4) > span > span"`
+	Kills       *int     `selector:"td:nth-child(5) > span > span"`
+	Deaths      *int     `selector:"td:nth-child(6) > span > span:nth-child(2) > span"`
+	Assists     *int     `selector:"td:nth-child(7) > span > span"`
+	Kast        *float64 `selector:"td:nth-child(9) > span > span"`
+	Adr         *float64 `selector:"td:nth-child(10) > span > span"`
+	Hs          *float64 `selector:"td:nth-child(11) > span > span"`
+	FirstKills  *int     `selector:"td:nth-child(12) > span > span"`
+	FirstDeaths *int     `selector:"td:nth-child(13) > span > span"`
 }
 
 func initPlayerOverviewStatSchema(
@@ -46,24 +46,11 @@ func initPlayerOverviewStatSchema(
 	teamId int,
 	side Side,
 ) PlayerOverviewStatSchema {
-	var rating, acs, kast, adr, hs float64
-	var k, d, a, fk, fd int
-
 	return PlayerOverviewStatSchema{
-		MatchId:     matchId,
-		MapId:       mapId,
-		TeamId:      teamId,
-		Side:        side,
-		Rating:      &rating,
-		Acs:         &acs,
-		Kills:       &k,
-		Deaths:      &d,
-		Assists:     &a,
-		Kast:        &kast,
-		Adr:         &adr,
-		Hs:          &hs,
-		FirstKills:  &fk,
-		FirstDeaths: &fd,
+		MatchId: matchId,
+		MapId:   mapId,
+		TeamId:  teamId,
+		Side:    side,
 	}
 }
 
@@ -120,47 +107,13 @@ func (p *PlayerOverviewStatScraper) agentParser(rawVal string) (any, error) {
 	return agentId, nil
 }
 
-func floatToPtrParser(rawVal string) (any, error) {
-	floatStr := strings.TrimSpace(rawVal)
-	if floatStr == "" {
-		return nil, nil
-	}
-
-	floatVal, err := htmlx.FloatParser(rawVal)
-	if err != nil {
-		return nil, err
-	}
-
-	floatNum, _ := floatVal.(float64)
-	return &floatNum, nil
-}
-
-func intToPtrParser(rawVal string) (any, error) {
-	intStr := strings.TrimSpace(rawVal)
-	if intStr == "" {
-		return nil, nil
-	}
-
-	intVal, err := htmlx.IntParser(rawVal)
-	if err != nil {
-		return nil, err
-	}
-
-	intNum, _ := intVal.(int)
-	return &intNum, nil
-}
-
 // NOTE: Split the node in the node for def, atk and both
 func (p *PlayerOverviewStatScraper) splitNode() (*goquery.Selection, *goquery.Selection, *goquery.Selection, error) {
 	defPlayerOverviewStatNode := p.PlayerOverviewStatNode.Clone()
-	defPlayerOverviewStatNode.Find(
-		"span.mod-t, span.mod-both",
-	).Remove()
+	defPlayerOverviewStatNode.Find("span.mod-t, span.mod-both").Remove()
 
 	atkPlayerOverviewStatNode := p.PlayerOverviewStatNode.Clone()
-	atkPlayerOverviewStatNode.Find(
-		"span.mod-ct, span.mod-both",
-	).Remove()
+	atkPlayerOverviewStatNode.Find("span.mod-ct, span.mod-both").Remove()
 
 	bothSidePlayerOverviewStatNode := p.PlayerOverviewStatNode.Clone()
 	bothSidePlayerOverviewStatNode.Find("span.mod-ct, span.mod-t").Remove()
@@ -247,19 +200,15 @@ func (p *PlayerOverviewStatScraper) Scrape() error {
 	}
 
 	parsers := map[string]htmlx.Parser{
-		"intToPtrParser":   intToPtrParser,
-		"floatToPtrParser": floatToPtrParser,
-		"agentParser":      p.agentParser,
-		"playerIdParser":   customparsers.IdParser,
+		"agentParser":    p.agentParser,
+		"playerIdParser": customparsers.IdParser,
 	}
 
 	logrus.Debug("Parsing player def stats")
 	if err := htmlx.ParseFromSelection(
 		&p.Data.DefStat,
 		defPlayerOverviewStatNode,
-		htmlx.SetAllowParseToPointer(true),
 		htmlx.SetParsers(parsers),
-		htmlx.SetAllowNilPointer(true),
 	); err != nil {
 		return err
 	}
@@ -268,9 +217,7 @@ func (p *PlayerOverviewStatScraper) Scrape() error {
 	if err := htmlx.ParseFromSelection(
 		&p.Data.AtkStat,
 		atkPlayerOverviewStatNode,
-		htmlx.SetAllowParseToPointer(true),
 		htmlx.SetParsers(parsers),
-		htmlx.SetAllowNilPointer(true),
 	); err != nil {
 		return err
 	}
@@ -279,9 +226,7 @@ func (p *PlayerOverviewStatScraper) Scrape() error {
 	if err := htmlx.ParseFromSelection(
 		&p.Data.BothSideStat,
 		bothSidePlayerOverviewStatNode,
-		htmlx.SetAllowParseToPointer(true),
 		htmlx.SetParsers(parsers),
-		htmlx.SetAllowNilPointer(true),
 	); err != nil {
 		return err
 	}

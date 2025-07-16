@@ -26,40 +26,14 @@ func NewPlayerScraper(
 	playerId int,
 	playerUrl string,
 ) *PlayerScraper {
-	var realName, imgUrl string
-	var countryId int
-
 	return &PlayerScraper{
 		Data: models.PlayerSchema{
-			Id:        playerId,
-			Url:       playerUrl,
-			RealName:  &realName,
-			ImgUrl:    &imgUrl,
-			CountryId: &countryId,
+			Id:  playerId,
+			Url: playerUrl,
 		},
 		PlayerPageContent: playerPageContent,
 		Tx:                tx,
 	}
-}
-
-func realNameParser(rawVal string) (any, error) {
-	nameStr := strings.TrimSpace(rawVal)
-
-	if nameStr == "" {
-		return nil, nil
-	}
-
-	return &nameStr, nil
-}
-
-func imgUrlParser(rawVal string) (any, error) {
-	imgUrlStr := strings.TrimSpace(rawVal)
-
-	if imgUrlStr == "" {
-		return nil, nil
-	}
-
-	return &imgUrlStr, nil
 }
 
 func (p *PlayerScraper) getCountryId(countryName string) (int, error) {
@@ -144,13 +118,11 @@ func (p *PlayerScraper) PrettyPrint() error {
 
 func (p *PlayerScraper) Scrape() error {
 	parsers := map[string]htmlx.Parser{
-		"realNameParser":  realNameParser,
-		"imgUrlParser":    imgUrlParser,
 		"countryIdParser": p.countryIdParser,
 	}
 
 	logrus.Debug("Scraping player information")
-	if err := htmlx.ParseFromSelection(&p.Data, p.PlayerPageContent, htmlx.SetParsers(parsers), htmlx.SetAllowNilPointer(true)); err != nil {
+	if err := htmlx.ParseFromSelection(&p.Data, p.PlayerPageContent, htmlx.SetParsers(parsers)); err != nil {
 		return err
 	}
 
