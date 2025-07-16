@@ -8,6 +8,7 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/leminhohoho/vlr-prediction/scraping/pkgs/htmlx"
+	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/models"
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
@@ -15,28 +16,8 @@ import (
 type HighlightType string
 
 const (
-	P2k  HighlightType = "2k"
-	P3k  HighlightType = "3k"
-	P4k  HighlightType = "4k"
-	P5k  HighlightType = "5k"
-	P1v1 HighlightType = "1v1"
-	P1v2 HighlightType = "1v2"
-	P1v3 HighlightType = "1v3"
-	P1v4 HighlightType = "1v4"
-	P1v5 HighlightType = "1v5"
-
 	PlayerNameSelector = "div:not(:first-child)"
 )
-
-type PlayerHighlightSchema struct {
-	MatchId         int
-	MapId           int
-	RoundNo         int
-	TeamId          int
-	PlayerId        int
-	HighlightType   HighlightType
-	PlayerAgainstId int
-}
 
 type Data struct {
 	MatchId          int
@@ -44,8 +25,8 @@ type Data struct {
 	RoundNo          int `selector:"div:nth-child(1) > span"`
 	TeamId           int
 	PlayerId         int
-	HighlightType    HighlightType
-	HighlightLog     []PlayerHighlightSchema
+	HighlightType    models.HighlightType
+	HighlightLog     []models.PlayerHighlightSchema
 	OtherTeamHashMap map[string]int
 }
 
@@ -61,7 +42,7 @@ func NewPlayerHighlightScraper(
 	tx *gorm.Tx,
 	playerHighlightNode *goquery.Selection,
 	matchId, mapId, teamId, playerId int,
-	highlightType HighlightType,
+	highlightType models.HighlightType,
 	otherTeamHashMap map[string]int,
 ) *PlayerHighlightScraper {
 	return &PlayerHighlightScraper{
@@ -96,7 +77,7 @@ func (p *PlayerHighlightScraper) getPlayersId() error {
 				return
 			}
 
-			p.Data.HighlightLog = append(p.Data.HighlightLog, PlayerHighlightSchema{
+			p.Data.HighlightLog = append(p.Data.HighlightLog, models.PlayerHighlightSchema{
 				MatchId:         p.Data.MatchId,
 				MapId:           p.Data.MapId,
 				RoundNo:         p.Data.RoundNo,

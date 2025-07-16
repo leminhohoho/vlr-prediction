@@ -6,24 +6,10 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/models"
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
-
-type Action string
-
-const (
-	Ban    Action = "ban"
-	Pick   Action = "pick"
-	Remain Action = "remains"
-)
-
-type Turn struct {
-	MatchId int
-	TeamId  *int
-	MapId   int
-	Action  Action
-}
 
 type Data struct {
 	MatchId        int
@@ -31,7 +17,7 @@ type Data struct {
 	Team2Id        int
 	Team1Shorthand string
 	Team2Shorthand string
-	Turns          []Turn
+	Turns          []models.BanPickLogSchema
 }
 
 type BanPickLogScraper struct {
@@ -71,7 +57,9 @@ func (b *BanPickLogScraper) getMapId(mapName string) (int, error) {
 	return mapId, nil
 }
 
-func (b *BanPickLogScraper) parseToTurn(teamShorthand, action, mapName string) (Turn, error) {
+func (b *BanPickLogScraper) parseToTurn(
+	teamShorthand, action, mapName string,
+) (models.BanPickLogSchema, error) {
 	var teamId int
 
 	if teamShorthand == b.Data.Team1Shorthand {
@@ -79,48 +67,48 @@ func (b *BanPickLogScraper) parseToTurn(teamShorthand, action, mapName string) (
 	} else if teamShorthand == b.Data.Team2Shorthand {
 		teamId = b.Data.Team2Id
 	} else {
-		return Turn{}, fmt.Errorf("Unrecognizable team shorthand: %s", teamShorthand)
+		return models.BanPickLogSchema{}, fmt.Errorf("Unrecognizable team shorthand: %s", teamShorthand)
 	}
 
 	mapId, err := b.getMapId(mapName)
 	if err != nil {
-		return Turn{}, err
+		return models.BanPickLogSchema{}, err
 	}
 
-	if Action(action) == Ban {
-		return Turn{
+	if models.VetoAction(action) == models.Ban {
+		return models.BanPickLogSchema{
 			MatchId: b.Data.MatchId,
 			TeamId:  &teamId,
 			MapId:   mapId,
-			Action:  Ban,
+			Action:  models.Ban,
 		}, nil
-	} else if Action(action) == Pick {
-		return Turn{
+	} else if models.VetoAction(action) == models.Pick {
+		return models.BanPickLogSchema{
 			MatchId: b.Data.MatchId,
 			TeamId:  &teamId,
 			MapId:   mapId,
-			Action:  Pick,
+			Action:  models.Pick,
 		}, nil
 	} else {
-		return Turn{}, fmt.Errorf("Unable to recognize action %s", action)
+		return models.BanPickLogSchema{}, fmt.Errorf("Unable to recognize action %s", action)
 	}
 }
 
-func (b *BanPickLogScraper) parseToFinalTurn(mapName, action string) (Turn, error) {
+func (b *BanPickLogScraper) parseToFinalTurn(mapName, action string) (models.BanPickLogSchema, error) {
 	mapId, err := b.getMapId(mapName)
 	if err != nil {
-		return Turn{}, err
+		return models.BanPickLogSchema{}, err
 	}
 
-	if Action(action) != Remain {
-		return Turn{}, fmt.Errorf("Unable to recognize action %s", action)
+	if models.VetoAction(action) != models.Remain {
+		return models.BanPickLogSchema{}, fmt.Errorf("Unable to recognize action %s", action)
 	}
 
-	return Turn{
+	return models.BanPickLogSchema{
 		MatchId: b.Data.MatchId,
 		TeamId:  nil,
 		MapId:   mapId,
-		Action:  Remain,
+		Action:  models.Remain,
 	}, nil
 }
 

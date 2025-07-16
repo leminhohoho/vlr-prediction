@@ -9,28 +9,13 @@ import (
 	"github.com/PuerkitoBio/goquery"
 	"github.com/leminhohoho/vlr-prediction/scraping/pkgs/htmlx"
 	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/helpers"
+	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/models"
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
 
-type MatchMapSchema struct {
-	MatchId       int
-	MapId         int
-	Duration      *int `selector:"div.vm-stats-game-header > div.map > div.map-duration"                              parser:"durationParser"`
-	Team1Id       int
-	Team2Id       int
-	Team1DefScore int  `selector:"div.vm-stats-game-header > div:nth-child(1) > div:nth-child(2) > span.mod-ct"`
-	Team1AtkScore int  `selector:"div.vm-stats-game-header > div:nth-child(1) > div:nth-child(2) > span.mod-t"`
-	Team1OTScore  int  `selector:"div.vm-stats-game-header > div:nth-child(1) > div:nth-child(2) > span.mod-ot"`
-	Team2DefScore int  `selector:"div.vm-stats-game-header > div.team.mod-right > div:nth-child(1) > span.mod-ct"`
-	Team2AtkScore int  `selector:"div.vm-stats-game-header > div.team.mod-right > div:nth-child(1) > span.mod-t"`
-	Team2OTScore  int  `selector:"div.vm-stats-game-header > div.team.mod-right > div:nth-child(1) > span.mod-ot"`
-	TeamDefFirst  int  `selector:"div.vm-stats-game-header > div:nth-child(1) > div:nth-child(2) > span:nth-child(2)" parser:"defFirstParser" source:"attr=class"`
-	TeamPick      *int `selector:"div.vm-stats-game-header > div.map > div:nth-child(1) > span > span.picked"         parser:"teamPickParser" source:"attr=class"`
-}
-
 type MatchMapScraper struct {
-	Data            MatchMapSchema
+	Data            models.MatchMapSchema
 	MapOverviewNode *goquery.Selection
 	Conn            *sql.DB
 	Tx              *gorm.Tx
@@ -43,7 +28,7 @@ func NewMatchMapScraper(
 	matchId, mapId, team1Id, team2Id int,
 ) *MatchMapScraper {
 	return &MatchMapScraper{
-		Data: MatchMapSchema{
+		Data: models.MatchMapSchema{
 			MatchId: matchId,
 			MapId:   mapId,
 			Team1Id: team1Id,

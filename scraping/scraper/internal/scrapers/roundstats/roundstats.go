@@ -8,52 +8,13 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/leminhohoho/vlr-prediction/scraping/pkgs/htmlx"
+	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/models"
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
 
-type BuyType string
-
-type WonMethod string
-
-const (
-	Pistol  BuyType = "pistol"
-	Eco     BuyType = "eco"
-	SemiEco BuyType = "semi_eco"
-	SemiBuy BuyType = "semi_buy"
-	FullBuy BuyType = "full_buy"
-
-	Eliminate    WonMethod = "eliminate"
-	SpikeExplode WonMethod = "spike_explode"
-	Defuse       WonMethod = "defuse"
-	OutOfTime    WonMethod = "out_of_time"
-)
-
-type RoundOverviewSchema struct {
-	RoundNo   int       `selector:"div.rnd-num"`
-	TeamWon   int       `selector:"div.rnd-sq.mod-win:nth-child(2)" source:"attr=class" parser:"teamWonParser"`
-	WonMethod WonMethod `selector:"div.rnd-sq.mod-win > img"        source:"attr=src"   parser:"wonMethodParser"`
-}
-
-type RoundEconomySchema struct {
-	TeamDef      int     `selector:"div.rnd-sq.mod-win"      source:"attr=class" parser:"teamDefParser"`
-	Team1BuyType BuyType `selector:"div.rnd-sq:nth-child(3)"                     parser:"buyTypeParser"`
-	Team2BuyType BuyType `selector:"div.rnd-sq:nth-child(4)"                     parser:"buyTypeParser"`
-	Team1Bank    int     `selector:"div.bank:nth-child(2)"                       parser:"balanceParser"`
-	Team2Bank    int     `selector:"div.bank:nth-child(5)"                       parser:"balanceParser"`
-}
-
-type RoundStatSchema struct {
-	MatchId int
-	MapId   int
-	Team1Id int
-	Team2Id int
-	RoundOverviewSchema
-	RoundEconomySchema
-}
-
 type RoundStatScraper struct {
-	Data              RoundStatSchema
+	Data              models.RoundStatSchema
 	RoundOverviewNode *goquery.Selection
 	RoundEconomyNode  *goquery.Selection
 	Conn              *sql.DB
@@ -71,7 +32,7 @@ func NewRoundStatScraper(
 	team2Id int,
 ) *RoundStatScraper {
 	return &RoundStatScraper{
-		Data: RoundStatSchema{
+		Data: models.RoundStatSchema{
 			MatchId: matchId,
 			MapId:   mapId,
 			Team1Id: team1Id,
@@ -96,13 +57,13 @@ func wonMethodParser(rawVal string) (any, error) {
 	src := strings.TrimSpace(rawVal)
 	switch src {
 	case "/img/vlr/game/round/elim.webp":
-		return Eliminate, nil
+		return models.Eliminate, nil
 	case "/img/vlr/game/round/boom.webp":
-		return SpikeExplode, nil
+		return models.SpikeExplode, nil
 	case "/img/vlr/game/round/defuse.webp":
-		return Defuse, nil
+		return models.Defuse, nil
 	case "/img/vlr/game/round/time.webp":
-		return OutOfTime, nil
+		return models.OutOfTime, nil
 	default:
 		return nil, fmt.Errorf("Unable to specify the won method from this img src: %s", src)
 	}
@@ -133,18 +94,18 @@ func (r *RoundStatScraper) buyTypeParser(rawVal string) (any, error) {
 	buyStr := strings.TrimSpace(rawVal)
 
 	if r.Data.RoundNo == 1 || r.Data.RoundNo == 12 {
-		return Pistol, nil
+		return models.Pistol, nil
 	}
 
 	switch buyStr {
 	case "":
-		return Eco, nil
+		return models.Eco, nil
 	case "$":
-		return SemiEco, nil
+		return models.SemiEco, nil
 	case "$$":
-		return SemiBuy, nil
+		return models.SemiBuy, nil
 	case "$$$":
-		return FullBuy, nil
+		return models.FullBuy, nil
 	default:
 		return nil, fmt.Errorf("Unable to determinte the buy type from this string: %s", buyStr)
 	}
@@ -165,7 +126,7 @@ func balanceParser(rawVal string) (any, error) {
 func (r *RoundStatScraper) scrapeOverviewInfo() error {
 	logrus.Debug("Scraping round overview info")
 
-	var roundOverviewSchema RoundOverviewSchema
+	var roundOverviewSchema models.RoundOverviewSchema
 
 	parsers := map[string]htmlx.Parser{
 		"teamWonParser":   r.teamWonParser,
@@ -184,7 +145,7 @@ func (r *RoundStatScraper) scrapeOverviewInfo() error {
 func (r *RoundStatScraper) scrapeEconomyInfo() error {
 	logrus.Debug("Scraping round economy info")
 
-	var roundEconomySchema RoundEconomySchema
+	var roundEconomySchema models.RoundEconomySchema
 
 	parsers := map[string]htmlx.Parser{
 		"teamDefParser": r.teamDefParser,

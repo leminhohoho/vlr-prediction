@@ -6,37 +6,13 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/leminhohoho/vlr-prediction/scraping/pkgs/htmlx"
+	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/models"
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
 
-type DuelKills struct {
-	Team1PlayerKillsVsTeam2Player int `selector:"div:nth-child(1)" parser:"duelParser"`
-	Team2PlayerKillsVsTeam1Player int `selector:"div:nth-child(2)" parser:"duelParser"`
-}
-
-type DuelFirstKills struct {
-	Team1PlayerFirstKillsVsTeam2Player int `selector:"div:nth-child(1)" parser:"duelParser"`
-	Team2PlayerFirstKillsVsTeam1Player int `selector:"div:nth-child(2)" parser:"duelParser"`
-}
-
-type DuelOpKills struct {
-	Team1PlayerOpKillsVsTeam2Player int `selector:"div:nth-child(1)" parser:"duelParser"`
-	Team2PlayerOpKillsVsTeam1Player int `selector:"div:nth-child(2)" parser:"duelParser"`
-}
-
-type PlayerDuelStatSchema struct {
-	MatchId       int
-	MapId         int
-	Team1PlayerId int
-	Team2PlayerId int
-	DuelKills
-	DuelFirstKills
-	DuelOpKills
-}
-
 type PlayerDuelStatScraper struct {
-	Data                     PlayerDuelStatSchema
+	Data                     models.PlayerDuelStatSchema
 	PlayerDuelKillsNode      *goquery.Selection
 	PlayerDuelFirstKillsNode *goquery.Selection
 	PlayerDuelOpKillsNode    *goquery.Selection
@@ -51,7 +27,7 @@ func NewPlayerDuelStatScraper(
 	matchId, mapId, team1PlayerId, team2PlayerId int,
 ) *PlayerDuelStatScraper {
 	return &PlayerDuelStatScraper{
-		Data: PlayerDuelStatSchema{
+		Data: models.PlayerDuelStatSchema{
 			MatchId:       matchId,
 			MapId:         mapId,
 			Team1PlayerId: team1PlayerId,
@@ -80,9 +56,9 @@ func (p *PlayerDuelStatScraper) Scrape() error {
 		"duelParser": htmlx.IfNullParser(0, htmlx.IntParser),
 	}
 
-	var duelKills DuelKills
-	var duelFirstKills DuelFirstKills
-	var duelOpKills DuelOpKills
+	var duelKills models.DuelKills
+	var duelFirstKills models.DuelFirstKills
+	var duelOpKills models.DuelOpKills
 
 	logrus.Debug("Getting player duel kills")
 	if err := htmlx.ParseFromSelection(&duelKills, p.PlayerDuelKillsNode, htmlx.SetParsers(parsers)); err != nil {

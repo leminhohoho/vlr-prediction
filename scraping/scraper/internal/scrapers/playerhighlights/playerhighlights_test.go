@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/PuerkitoBio/goquery"
+	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/models"
 )
 
 func TestPlayerHightlights(t *testing.T) {
@@ -40,7 +41,7 @@ func TestPlayerHightlights(t *testing.T) {
 		9,
 		2593,
 		9554,
-		P1v2,
+		models.P1v2,
 		prxHashMap,
 	)
 
