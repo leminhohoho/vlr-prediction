@@ -64,7 +64,7 @@ func TestHTMLxPrimitiveTypes(t *testing.T) {
 		},
 	}
 
-	if err = ParseFromDocument(&matchInfo, doc, SetParsers(parsers), SetAllowNilPointer(true)); err != nil {
+	if err = ParseFromDocument(&matchInfo, doc, SetParsers(parsers)); err != nil {
 		t.Fatal(err)
 	}
 

@@ -18,7 +18,6 @@ type Config struct {
 	noEmptySelection    bool
 	parseAllFields      bool
 	noMissingAttributes bool
-	allowNilPointer     bool
 	noPassThroughStruct bool
 }
 
@@ -63,13 +62,6 @@ func SetParseAllFields(strict bool) Option {
 func SetNoMissingAttributes(forbid bool) Option {
 	return func(c *Config) {
 		c.noMissingAttributes = forbid
-	}
-}
-
-// Allow pointer to be set to nil
-func SetAllowNilPointer(allow bool) Option {
-	return func(c *Config) {
-		c.allowNilPointer = allow
 	}
 }
 
@@ -320,13 +312,13 @@ func parseValueWithCustomParser(
 		return fmt.Errorf("parser '%s' error: %s", parserName, err.Error())
 	}
 
+	if val == nil {
+		fieldVal.Set(reflect.Zero(fieldVal.Type()))
+		return nil
+	}
+
 	processedVal := reflect.ValueOf(val)
 	if !processedVal.IsValid() {
-		if config.allowNilPointer {
-			fieldVal.Set(reflect.Zero(fieldVal.Type()))
-			return nil
-		}
-
 		return fmt.Errorf("processed value using parser %s is invalid", parserName)
 	}
 
@@ -400,6 +392,11 @@ func parseValue(fieldVal reflect.Value, rawVal string, config *Config, htmlxTags
 
 	if htmlxTags.parser != "" {
 		return parseValueWithCustomParser(fieldVal, rawVal, config, htmlxTags.parser)
+	}
+
+	if strings.TrimSpace(rawVal) == "" {
+		// Skip the  field if the raw value is empty
+		return nil
 	}
 
 	return parseSupportedValues(fieldVal, rawVal, config, htmlxTags)
