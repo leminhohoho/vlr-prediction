@@ -5,18 +5,26 @@ import (
 	"testing"
 
 	"github.com/PuerkitoBio/goquery"
-	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/helpers"
-	_ "github.com/mattn/go-sqlite3"
+	"github.com/joho/godotenv"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
+)
+
+const (
+	dbPath = "/home/leminhohoho/repos/vlr-prediction/database/vlr.db"
 )
 
 func TestPlayerStat(t *testing.T) {
+	if err := godotenv.Load("/home/leminhohoho/repos/vlr-prediction/scraping/scraper/.env"); err != nil {
+		t.Fatal(err)
+	}
 
-	dbPath := "/home/leminhohoho/repos/vlr-prediction/database/vlr.db"
-	conn, err := helpers.GetConn(dbPath)
+	db, err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer conn.Close()
+
+	tx := db.Begin()
 
 	res, err := http.Get(
 		"https://www.vlr.gg/490310/paper-rex-vs-gen-g-champions-tour-2025-masters-toronto-r2-1-0",
@@ -30,49 +38,37 @@ func TestPlayerStat(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	forsakenOverviewStatNode := doc.Find(
-		`#wrapper > div.col-container > div.col.mod-3 > div:nth-child(6) > div > div.vm-stats-container > div:nth-child(3) > div:nth-child(4) > div:nth-child(1) > table > tbody > tr:nth-child(5)`,
-	)
-
-	forsakenOverviewStatScraper := NewPlayerOverviewStatScraper(
-		conn,
-		nil,
-		forsakenOverviewStatNode,
-		490310,
-		624,
-		17,
-		12,
-		4,
-	)
-
-	if err := forsakenOverviewStatScraper.Scrape(); err != nil {
-		t.Fatal(err)
+	selectors := []string{
+		"#wrapper > div.col-container > div.col.mod-3 > div:nth-child(6) > div > div.vm-stats-container > div:nth-child(3) > div:nth-child(4) > div:nth-child(1) > table > tbody > tr:nth-child(1)",
+		"#wrapper > div.col-container > div.col.mod-3 > div:nth-child(6) > div > div.vm-stats-container > div:nth-child(3) > div:nth-child(4) > div:nth-child(1) > table > tbody > tr:nth-child(2)",
+		"#wrapper > div.col-container > div.col.mod-3 > div:nth-child(6) > div > div.vm-stats-container > div:nth-child(3) > div:nth-child(4) > div:nth-child(1) > table > tbody > tr:nth-child(3)",
+		"#wrapper > div.col-container > div.col.mod-3 > div:nth-child(6) > div > div.vm-stats-container > div:nth-child(3) > div:nth-child(4) > div:nth-child(1) > table > tbody > tr:nth-child(4)",
+		"#wrapper > div.col-container > div.col.mod-3 > div:nth-child(6) > div > div.vm-stats-container > div:nth-child(3) > div:nth-child(4) > div:nth-child(1) > table > tbody > tr:nth-child(5)",
+		"#wrapper > div.col-container > div.col.mod-3 > div:nth-child(6) > div > div.vm-stats-container > div:nth-child(3) > div:nth-child(4) > div:nth-child(2) > table > tbody > tr:nth-child(1)",
+		"#wrapper > div.col-container > div.col.mod-3 > div:nth-child(6) > div > div.vm-stats-container > div:nth-child(3) > div:nth-child(4) > div:nth-child(2) > table > tbody > tr:nth-child(2)",
+		"#wrapper > div.col-container > div.col.mod-3 > div:nth-child(6) > div > div.vm-stats-container > div:nth-child(3) > div:nth-child(4) > div:nth-child(2) > table > tbody > tr:nth-child(3)",
+		"#wrapper > div.col-container > div.col.mod-3 > div:nth-child(6) > div > div.vm-stats-container > div:nth-child(3) > div:nth-child(4) > div:nth-child(2) > table > tbody > tr:nth-child(4)",
+		"#wrapper > div.col-container > div.col.mod-3 > div:nth-child(6) > div > div.vm-stats-container > div:nth-child(3) > div:nth-child(4) > div:nth-child(2) > table > tbody > tr:nth-child(5)",
 	}
 
-	if err := forsakenOverviewStatScraper.PrettyPrint(); err != nil {
-		t.Fatal(err)
-	}
-
-	d4v4iOverviewStatNode := doc.Find(
-		`#wrapper > div.col-container > div.col.mod-3 > div:nth-child(6) > div > div.vm-stats-container > div:nth-child(3) > div:nth-child(4) > div:nth-child(1) > table > tbody > tr:nth-child(3)`,
-	)
-
-	d4v4iOverviewStatScraper := NewPlayerOverviewStatScraper(
-		conn,
-		nil,
-		d4v4iOverviewStatNode,
-		490310,
-		624,
-		17,
-		12,
-		4,
-	)
-
-	if err := d4v4iOverviewStatScraper.Scrape(); err != nil {
-		t.Fatal(err)
-	}
-
-	if err := d4v4iOverviewStatScraper.PrettyPrint(); err != nil {
-		t.Fatal(err)
+	for i, selector := range selectors {
+		if 0 <= i && i <= 4 {
+			p := NewPlayerOverviewStatScraper(tx, doc.Selection.Find(selector), -1, -1, -1, 4, 12)
+			if err := p.Scrape(); err != nil {
+				t.Fatal(err)
+			}
+			if err := p.PrettyPrint(); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if 5 <= i && i <= 9 {
+			p := NewPlayerOverviewStatScraper(tx, doc.Selection.Find(selector), -1, -1, -1, 12, 4)
+			if err := p.Scrape(); err != nil {
+				t.Fatal(err)
+			}
+			if err := p.PrettyPrint(); err != nil {
+				t.Fatal(err)
+			}
+		}
 	}
 }

@@ -1,7 +1,6 @@
 package playerstats
 
 import (
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -10,43 +9,18 @@ import (
 	"github.com/leminhohoho/vlr-prediction/scraping/pkgs/htmlx"
 	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/customparsers"
 	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/helpers"
+	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/models"
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
-
-type Side string
-
-const (
-	Def Side = "def"
-	Atk Side = "atk"
-)
-
-type PlayerOverviewStatSchema struct {
-	MatchId     int
-	MapId       int
-	TeamId      int
-	Side        Side
-	PlayerId    int      `selector:"td.mod-player > div > a"                           source:"attr=href"  parser:"playerIdParser"`
-	AgentId     int      `selector:"td.mod-agents > div > span > img"                  source:"attr=title" parser:"agentParser"`
-	Rating      *float64 `selector:"td:nth-child(3) > span > span"`
-	Acs         *float64 `selector:"td:nth-child(4) > span > span"`
-	Kills       *int     `selector:"td:nth-child(5) > span > span"`
-	Deaths      *int     `selector:"td:nth-child(6) > span > span:nth-child(2) > span"`
-	Assists     *int     `selector:"td:nth-child(7) > span > span"`
-	Kast        *float64 `selector:"td:nth-child(9) > span > span"`
-	Adr         *float64 `selector:"td:nth-child(10) > span > span"`
-	Hs          *float64 `selector:"td:nth-child(11) > span > span"`
-	FirstKills  *int     `selector:"td:nth-child(12) > span > span"`
-	FirstDeaths *int     `selector:"td:nth-child(13) > span > span"`
-}
 
 func initPlayerOverviewStatSchema(
 	matchId,
 	mapId,
 	teamId int,
-	side Side,
-) PlayerOverviewStatSchema {
-	return PlayerOverviewStatSchema{
+	side models.Side,
+) models.PlayerOverviewStatSchema {
+	return models.PlayerOverviewStatSchema{
 		MatchId: matchId,
 		MapId:   mapId,
 		TeamId:  teamId,
@@ -55,9 +29,9 @@ func initPlayerOverviewStatSchema(
 }
 
 type Data struct {
-	DefStat      PlayerOverviewStatSchema
-	AtkStat      PlayerOverviewStatSchema
-	BothSideStat PlayerOverviewStatSchema
+	DefStat      models.PlayerOverviewStatSchema
+	AtkStat      models.PlayerOverviewStatSchema
+	BothSideStat models.PlayerOverviewStatSchema
 	PlayerName   string `selector:"td.mod-player > div > a > div:nth-child(1)"`
 }
 
@@ -66,13 +40,11 @@ type PlayerOverviewStatScraper struct {
 	PlayerOverviewStatNode *goquery.Selection
 	TeamDefRounds          int
 	TeamAtkRounds          int
-	Conn                   *sql.DB
-	Tx                     *gorm.Tx
+	Tx                     *gorm.DB
 }
 
 func NewPlayerOverviewStatScraper(
-	conn *sql.DB,
-	tx *gorm.Tx,
+	tx *gorm.DB,
 	playerOverviewStatNode *goquery.Selection,
 	matchId int,
 	mapId int,
@@ -83,28 +55,27 @@ func NewPlayerOverviewStatScraper(
 ) *PlayerOverviewStatScraper {
 	return &PlayerOverviewStatScraper{
 		Data: Data{
-			DefStat:      initPlayerOverviewStatSchema(matchId, mapId, teamId, Def),
-			AtkStat:      initPlayerOverviewStatSchema(matchId, mapId, teamId, Atk),
-			BothSideStat: initPlayerOverviewStatSchema(matchId, mapId, teamId, Side("")),
+			DefStat:      initPlayerOverviewStatSchema(matchId, mapId, teamId, models.Def),
+			AtkStat:      initPlayerOverviewStatSchema(matchId, mapId, teamId, models.Atk),
+			BothSideStat: initPlayerOverviewStatSchema(matchId, mapId, teamId, models.Side("")),
 		},
 		PlayerOverviewStatNode: playerOverviewStatNode,
 		TeamDefRounds:          teamDefRounds,
 		TeamAtkRounds:          teamAtkRounds,
-		Conn:                   conn,
 		Tx:                     tx,
 	}
 }
 
 func (p *PlayerOverviewStatScraper) agentParser(rawVal string) (any, error) {
 	agentName := strings.TrimSpace(rawVal)
-	var agentId int
+	var agent models.AgentSchema
 
-	row := p.Conn.QueryRow("SELECT id FROM agents WHERE name = ?", agentName)
-	if err := row.Scan(&agentId); err != nil {
-		return nil, err
+	rs := p.Tx.Table("agents").Where("name = ?", agentName).Scan(&agent)
+	if rs.Error != nil {
+		return nil, rs.Error
 	}
 
-	return agentId, nil
+	return agent.Id, nil
 }
 
 // NOTE: Split the node in the node for def, atk and both
