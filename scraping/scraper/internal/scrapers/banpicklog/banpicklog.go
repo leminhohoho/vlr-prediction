@@ -1,7 +1,6 @@
 package banpicklog
 
 import (
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -23,13 +22,11 @@ type Data struct {
 type BanPickLogScraper struct {
 	Data        Data
 	BanPickNote string
-	Conn        *sql.DB
-	Tx          *gorm.Tx
+	Tx          *gorm.DB
 }
 
 func NewBanPickLogScraper(
-	conn *sql.DB,
-	tx *gorm.Tx,
+	tx *gorm.DB,
 	matchId, team1Id, team2Id int,
 	team1Shorthand, team2Shorthand, banPickNote string,
 ) *BanPickLogScraper {
@@ -42,74 +39,71 @@ func NewBanPickLogScraper(
 			Team2Shorthand: team2Shorthand,
 		},
 		BanPickNote: banPickNote,
-		Conn:        conn,
+		Tx:          tx,
 	}
 }
 
 func (b *BanPickLogScraper) getMapId(mapName string) (int, error) {
-	var mapId int
+	var vlrMap models.MapSchema
 
-	row := b.Conn.QueryRow("SELECT id FROM maps WHERE name = ?", mapName)
-	if err := row.Scan(&mapId); err != nil {
-		return -1, err
+	rs := b.Tx.Table("maps").Where("name = ?", mapName).First(&vlrMap)
+	if rs.Error != nil {
+		return -1, rs.Error
 	}
 
-	return mapId, nil
+	return vlrMap.Id, nil
 }
 
 func (b *BanPickLogScraper) parseToTurn(
 	teamShorthand, action, mapName string,
-) (models.BanPickLogSchema, error) {
-	var teamId int
+) (banPickLog models.BanPickLogSchema, err error) {
+	banPickLog.MatchId = b.Data.MatchId
 
-	if teamShorthand == b.Data.Team1Shorthand {
-		teamId = b.Data.Team1Id
-	} else if teamShorthand == b.Data.Team2Shorthand {
-		teamId = b.Data.Team2Id
-	} else {
-		return models.BanPickLogSchema{}, fmt.Errorf("Unrecognizable team shorthand: %s", teamShorthand)
+	switch teamShorthand {
+	case b.Data.Team1Shorthand:
+		banPickLog.TeamId = &b.Data.Team1Id
+	case b.Data.Team2Shorthand:
+		banPickLog.TeamId = &b.Data.Team2Id
+	default:
+		err = fmt.Errorf("Unrecognizable team shorthand: %s", teamShorthand)
+		return
 	}
 
-	mapId, err := b.getMapId(mapName)
+	banPickLog.MapId, err = b.getMapId(mapName)
 	if err != nil {
-		return models.BanPickLogSchema{}, err
+		return
 	}
 
-	if models.VetoAction(action) == models.Ban {
-		return models.BanPickLogSchema{
-			MatchId: b.Data.MatchId,
-			TeamId:  &teamId,
-			MapId:   mapId,
-			Action:  models.Ban,
-		}, nil
-	} else if models.VetoAction(action) == models.Pick {
-		return models.BanPickLogSchema{
-			MatchId: b.Data.MatchId,
-			TeamId:  &teamId,
-			MapId:   mapId,
-			Action:  models.Pick,
-		}, nil
-	} else {
-		return models.BanPickLogSchema{}, fmt.Errorf("Unable to recognize action %s", action)
+	switch models.VetoAction(action) {
+	case models.BanMap:
+		banPickLog.Action = models.BanMap
+	case models.PickMap:
+		banPickLog.Action = models.PickMap
+	default:
+		err = fmt.Errorf("Unable to recognize action %s", action)
+		return
 	}
+
+	return
 }
 
-func (b *BanPickLogScraper) parseToFinalTurn(mapName, action string) (models.BanPickLogSchema, error) {
-	mapId, err := b.getMapId(mapName)
+func (b *BanPickLogScraper) parseToFinalTurn(
+	mapName, action string,
+) (banPickLog models.BanPickLogSchema, err error) {
+	banPickLog.MapId, err = b.getMapId(mapName)
 	if err != nil {
-		return models.BanPickLogSchema{}, err
+		return
 	}
 
-	if models.VetoAction(action) != models.Remain {
-		return models.BanPickLogSchema{}, fmt.Errorf("Unable to recognize action %s", action)
+	if models.VetoAction(action) != models.RemainMap {
+		err = fmt.Errorf("Unable to recognize action %s", action)
+		return
 	}
 
-	return models.BanPickLogSchema{
-		MatchId: b.Data.MatchId,
-		TeamId:  nil,
-		MapId:   mapId,
-		Action:  models.Remain,
-	}, nil
+	banPickLog.MatchId = b.Data.MatchId
+	banPickLog.Action = models.RemainMap
+
+	return
 }
 
 func (b *BanPickLogScraper) PrettyPrint() error {
@@ -127,22 +121,24 @@ func (b *BanPickLogScraper) Scrape() error {
 	turnStrs := strings.Split(b.BanPickNote, ";")
 
 	logrus.Debug("Getting ban pick log info")
-	for _, turnStr := range turnStrs {
+	for i, turnStr := range turnStrs {
 		words := strings.Fields(strings.TrimSpace(turnStr))
-		if len(words) == 3 {
-			turn, err := b.parseToTurn(words[0], words[1], words[2])
-			if err != nil {
+		switch len(words) {
+		case 3:
+			if turn, err := b.parseToTurn(words[0], words[1], words[2]); err != nil {
 				return err
+			} else {
+				turn.Order = i + 1
+				b.Data.Turns = append(b.Data.Turns, turn)
 			}
-			b.Data.Turns = append(b.Data.Turns, turn)
-		} else if len(words) == 2 {
-			turn, err := b.parseToFinalTurn(words[0], words[1])
-			if err != nil {
+		case 2:
+			if turn, err := b.parseToFinalTurn(words[0], words[1]); err != nil {
 				return err
+			} else {
+				turn.Order = i + 1
+				b.Data.Turns = append(b.Data.Turns, turn)
 			}
-
-			b.Data.Turns = append(b.Data.Turns, turn)
-		} else {
+		default:
 			return fmt.Errorf("Unable to determine the turn from this string: %s", turnStr)
 		}
 	}

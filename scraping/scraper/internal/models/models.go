@@ -67,6 +67,12 @@ type AgentSchema struct {
 	ReleaseDate string    `gorm:"column:release_date"`
 }
 
+type MapSchema struct {
+	Id          int    `gorm:"column:id;primaryKey;autoIncrement"`
+	Name        string `gorm:"column:name"`
+	ReleaseDate string `gorm:"column:release_date"`
+}
+
 type MatchSchema struct {
 	Id           int
 	Url          string
@@ -84,6 +90,7 @@ type MatchSchema struct {
 type BanPickLogSchema struct {
 	MatchId int
 	TeamId  *int
+	Order   int
 	MapId   int
 	Action  VetoAction
 }
