@@ -253,6 +253,7 @@ func parseFromReflectValue(
 		}
 
 		htmlElement := sel.Find(htmlxTags.selector)
+
 		if config.noEmptySelection && htmlElement.Length() == 0 {
 			return fmt.Errorf("Error locating html element for field '%s'", fieldType.Name)
 		}
@@ -277,14 +278,14 @@ func getRawValue(
 	config *Config,
 ) (string, error) {
 	if source == "content" {
-		return htmlElement.Children().Remove().End().Text(), nil
+		return htmlElement.Clone().Children().Remove().End().Text(), nil
 	} else if regexp.MustCompile(`^attr=[a-zA-Z-0-9]+$`).MatchString(source) {
 		var exists bool
 		attrName := source[5:]
 		value, exists := htmlElement.Attr(attrName)
 		if !exists {
 			if config.noMissingAttributes {
-				return "", fmt.Errorf("Error locating attribute %s for field '%s'", source, fieldType.Name)
+				return "", fmt.Errorf("Error locating attribute %s for field '%s'", attrName, fieldType.Name)
 			}
 
 			return "", nil
