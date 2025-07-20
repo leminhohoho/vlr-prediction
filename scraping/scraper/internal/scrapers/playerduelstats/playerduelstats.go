@@ -16,11 +16,11 @@ type PlayerDuelStatScraper struct {
 	PlayerDuelKillsNode      *goquery.Selection
 	PlayerDuelFirstKillsNode *goquery.Selection
 	PlayerDuelOpKillsNode    *goquery.Selection
-	Tx                       *gorm.Tx
+	Tx                       *gorm.DB
 }
 
 func NewPlayerDuelStatScraper(
-	tx *gorm.Tx,
+	tx *gorm.DB,
 	playerDuelKillsNode *goquery.Selection,
 	playerDuelFirstKillsNode *goquery.Selection,
 	playerDuelOpKillsNode *goquery.Selection,
