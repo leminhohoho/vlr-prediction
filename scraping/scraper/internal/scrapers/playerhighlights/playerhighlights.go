@@ -1,7 +1,6 @@
 package playerhighlights
 
 import (
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -33,13 +32,11 @@ type Data struct {
 type PlayerHighlightScraper struct {
 	Data                Data
 	PlayerHighlightNode *goquery.Selection
-	Conn                *sql.DB
-	Tx                  *gorm.Tx
+	Tx                  *gorm.DB
 }
 
-func NewPlayerHighlightScraper(
-	conn *sql.DB,
-	tx *gorm.Tx,
+func NewScraper(
+	tx *gorm.DB,
 	playerHighlightNode *goquery.Selection,
 	matchId, mapId, teamId, playerId int,
 	highlightType models.HighlightType,
@@ -55,7 +52,6 @@ func NewPlayerHighlightScraper(
 			OtherTeamHashMap: otherTeamHashMap,
 		},
 		PlayerHighlightNode: playerHighlightNode,
-		Conn:                conn,
 		Tx:                  tx,
 	}
 }
@@ -87,8 +83,9 @@ func (p *PlayerHighlightScraper) getPlayersId() error {
 				PlayerAgainstId: playerAgainstId,
 			})
 
-			errChan <- nil
 		})
+
+		errChan <- nil
 	}()
 
 	select {
