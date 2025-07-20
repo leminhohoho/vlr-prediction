@@ -97,7 +97,7 @@ type BanPickLogSchema struct {
 
 type MatchMapSchema struct {
 	MatchId       int
-	MapId         int
+	MapId         int  `selector:"div.vm-stats-game-header > div.map > div:nth-child(1) > span"                       parser:"mapIdParser"`
 	Duration      *int `selector:"div.vm-stats-game-header > div.map > div.map-duration"                              parser:"durationParser"`
 	Team1Id       int
 	Team2Id       int

@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
+	"reflect"
 	"strings"
 	"time"
 )
@@ -145,4 +146,52 @@ func GetConn(dbPath string) (*sql.DB, error) {
 	}
 
 	return conn, nil
+}
+
+func CompareStructs(structA any, structB any) error {
+	sA := reflect.ValueOf(structA)
+	sB := reflect.ValueOf(structB)
+
+	if sA.Kind() != reflect.Struct {
+		return fmt.Errorf("struct a is not a struct but %v instead", sA.Type())
+	}
+
+	if sB.Kind() != reflect.Struct {
+		return fmt.Errorf("struct a is not a struct but %v instead", sB.Type())
+	}
+
+	for i := range sA.NumField() {
+		vA := sA.Field(i)
+		vB := sB.Field(i)
+		fieldName := sA.Type().Field(i).Name
+
+		if vA.Kind() != vB.Kind() {
+			return fmt.Errorf(
+				"Error validating field '%s', type '%v' != type '%v'",
+				fieldName,
+				vA.Type(),
+				vB.Type(),
+			)
+		}
+
+		if vA.Kind() == reflect.Ptr && vA.IsNil() == vB.IsNil() {
+			if vA.IsNil() {
+				continue
+			}
+
+			vA = vA.Elem()
+			vB = vB.Elem()
+		}
+
+		if !vA.Equal(vB) {
+			return fmt.Errorf(
+				"Error validating field '%s', '%v' != '%v'",
+				fieldName,
+				vA.Interface(),
+				vB.Interface(),
+			)
+		}
+	}
+
+	return nil
 }
