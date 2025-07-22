@@ -196,3 +196,13 @@ type RoundStatSchema struct {
 	RoundOverviewSchema
 	RoundEconomySchema
 }
+
+type TeamSchema struct {
+	Id            int
+	Name          string  `selector:"#wrapper > div.col-container > div > div.wf-card.mod-header.mod-full > div.team-header > div.team-header-desc > div > div.team-header-name > h1"`
+	ShorthandName *string `selector:"#wrapper > div.col-container > div > div.wf-card.mod-header.mod-full > div.team-header > div.team-header-desc > div > div.team-header-name > h2"`
+	Url           string
+	ImgUrl        *string `selector:"#wrapper > div.col-container > div > div.wf-card.mod-header.mod-full > div.team-header > div.wf-avatar.team-header-logo > div > img" source:"attr=src"`
+	CountryId     *int
+	RegionId      *int
+}
