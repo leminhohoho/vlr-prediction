@@ -94,7 +94,7 @@ func TestPlayerFullInfo(t *testing.T) {
 
 	regionTable := table.NewWriter()
 	regionTable.SetOutputMirror(os.Stdout)
-	countryTable.AppendHeader(table.Row{"id", "name"})
+	regionTable.AppendHeader(table.Row{"id", "name"})
 	for _, regions := range regions {
 		regionTable.AppendRow(table.Row{regions.Id, regions.Name})
 	}

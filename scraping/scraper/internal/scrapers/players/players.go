@@ -93,7 +93,6 @@ func (p *PlayerScraper) countryIdParser(rawVal string) (any, error) {
 			return nil, err
 		}
 
-		// TODO: Add code for inserting into (the line below is placeholder)
 		countryId, err := p.addCountryInfo(countryOfficialName, regionOfficialName)
 		if err != nil {
 			return nil, err

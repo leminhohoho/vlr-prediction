@@ -2,11 +2,11 @@ package matches
 
 import (
 	"net/http"
-	"reflect"
 	"testing"
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
+	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/helpers"
 	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/models"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -15,26 +15,6 @@ import (
 const (
 	dbPath = "/home/leminhohoho/repos/vlr-prediction/database/vlr.db"
 )
-
-func compareMatches(t *testing.T, test models.MatchSchema, result models.MatchSchema) {
-	sTest := reflect.ValueOf(test)
-	sResult := reflect.ValueOf(result)
-
-	for i := range sTest.NumField() {
-		vTest := sTest.Field(i)
-		vResult := sResult.Field(i)
-		fieldName := sTest.Type().Field(i).Name
-
-		if !vTest.Equal(vResult) {
-			t.Errorf(
-				"Error validating field '%s', want '%v', get '%v'",
-				fieldName,
-				vTest.Interface(),
-				vResult.Interface(),
-			)
-		}
-	}
-}
 
 func TestMatchScraper(t *testing.T) {
 	testMatches := []models.MatchSchema{
@@ -103,7 +83,9 @@ func TestMatchScraper(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		compareMatches(t, testMatch, m.Data)
+		if err := helpers.CompareStructs(testMatch, m.Data); err != nil {
+			t.Error(err)
+		}
 
 		if err := m.PrettyPrint(); err != nil {
 			t.Fatal(err)

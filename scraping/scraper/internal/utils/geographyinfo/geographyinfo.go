@@ -1,12 +1,17 @@
 package geographyinfo
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
 
 	"github.com/gocarina/gocsv"
 	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/helpers"
+)
+
+var (
+	ErrNotFound = errors.New("Can't find matching geography info for given location")
 )
 
 type GeographyInfo struct {
@@ -49,7 +54,7 @@ func GetInfoFromCountryName(countryName string) (GeographyInfo, error) {
 		}
 	}
 
-	return GeographyInfo{}, fmt.Errorf("Country name doesn't match any thing in the DB")
+	return GeographyInfo{}, ErrNotFound
 }
 
 func GetInfoFromRegionName(regionName string) (GeographyInfo, error) {
@@ -65,5 +70,5 @@ func GetInfoFromRegionName(regionName string) (GeographyInfo, error) {
 		}
 	}
 
-	return GeographyInfo{}, fmt.Errorf("Region name doesn't match any thing in the DB")
+	return GeographyInfo{}, ErrNotFound
 }
