@@ -129,9 +129,9 @@ DROP TABLE IF EXISTS ban_pick_log;
 CREATE TABLE IF NOT EXISTS ban_pick_log (
     match_id INTEGER NOT NULL,
     team_id INTEGER,
-    order INTEGER NOT NULL,
+    veto_order INTEGER NOT NULL,
     map_id INTEGER NOT NULL,
-    action TEXT NOT NULL CHECK(action IN ('ban', 'pick', 'remain')),
+    veto_action TEXT NOT NULL CHECK(veto_action IN ('ban', 'pick', 'remain')),
     ban_pick_order INTEGER NOT NULL CHECK(ban_pick_order >= 0),
 
     FOREIGN KEY (match_id) REFERENCES matches(id),

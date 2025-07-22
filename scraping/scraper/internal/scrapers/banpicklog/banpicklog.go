@@ -76,9 +76,9 @@ func (b *BanPickLogScraper) parseToTurn(
 
 	switch models.VetoAction(action) {
 	case models.BanMap:
-		banPickLog.Action = models.BanMap
+		banPickLog.VetoAction = models.BanMap
 	case models.PickMap:
-		banPickLog.Action = models.PickMap
+		banPickLog.VetoAction = models.PickMap
 	default:
 		err = fmt.Errorf("Unable to recognize action %s", action)
 		return
@@ -101,7 +101,7 @@ func (b *BanPickLogScraper) parseToFinalTurn(
 	}
 
 	banPickLog.MatchId = b.Data.MatchId
-	banPickLog.Action = models.RemainMap
+	banPickLog.VetoAction = models.RemainMap
 
 	return
 }
@@ -128,14 +128,14 @@ func (b *BanPickLogScraper) Scrape() error {
 			if turn, err := b.parseToTurn(words[0], words[1], words[2]); err != nil {
 				return err
 			} else {
-				turn.Order = i + 1
+				turn.VetoOrder = i + 1
 				b.Data.Turns = append(b.Data.Turns, turn)
 			}
 		case 2:
 			if turn, err := b.parseToFinalTurn(words[0], words[1]); err != nil {
 				return err
 			} else {
-				turn.Order = i + 1
+				turn.VetoOrder = i + 1
 				b.Data.Turns = append(b.Data.Turns, turn)
 			}
 		default:

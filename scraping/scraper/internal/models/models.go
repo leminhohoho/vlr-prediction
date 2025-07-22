@@ -88,11 +88,11 @@ type MatchSchema struct {
 }
 
 type BanPickLogSchema struct {
-	MatchId int
-	TeamId  *int
-	Order   int
-	MapId   int
-	Action  VetoAction
+	MatchId    int
+	TeamId     *int
+	VetoOrder  int
+	MapId      int
+	VetoAction VetoAction
 }
 
 type MatchMapSchema struct {

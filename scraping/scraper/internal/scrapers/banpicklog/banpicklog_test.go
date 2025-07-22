@@ -62,12 +62,12 @@ func validateTurn(
 		t.Errorf("Wrong map id, want %d, get %d", mapId, turn.MapId)
 	}
 
-	if turn.Order != order {
+	if turn.VetoOrder != order {
 		t.Errorf("Wrong order, want %d, get %d", mapId, turn.MapId)
 	}
 
-	if turn.Action != action {
-		t.Errorf("Wrong veto action, want %s, get %s", action, turn.Action)
+	if turn.VetoAction != action {
+		t.Errorf("Wrong veto action, want %s, get %s", action, turn.VetoAction)
 	}
 }
 
