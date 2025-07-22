@@ -1,7 +1,6 @@
 package roundstats
 
 import (
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -17,13 +16,11 @@ type RoundStatScraper struct {
 	Data              models.RoundStatSchema
 	RoundOverviewNode *goquery.Selection
 	RoundEconomyNode  *goquery.Selection
-	Conn              *sql.DB
-	Tx                *gorm.Tx
+	Tx                *gorm.DB
 }
 
-func NewRoundStatScraper(
-	conn *sql.DB,
-	tx *gorm.Tx,
+func NewScraper(
+	tx *gorm.DB,
 	roundOverviewNode *goquery.Selection,
 	roundEconomyNode *goquery.Selection,
 	matchId int,
@@ -40,7 +37,6 @@ func NewRoundStatScraper(
 		},
 		RoundOverviewNode: roundOverviewNode,
 		RoundEconomyNode:  roundEconomyNode,
-		Conn:              conn,
 		Tx:                tx,
 	}
 }
