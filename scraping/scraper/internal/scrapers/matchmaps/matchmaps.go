@@ -1,12 +1,14 @@
 package matchmaps
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/leminhohoho/vlr-prediction/scraping/pkgs/htmlx"
+	"github.com/leminhohoho/vlr-prediction/scraping/pkgs/piper"
 	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/customparsers"
 	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/helpers"
 	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/models"
@@ -14,50 +16,32 @@ import (
 	"gorm.io/gorm"
 )
 
-type MatchMapScraper struct {
-	Data            models.MatchMapSchema
-	MapOverviewNode *goquery.Selection
-	Tx              *gorm.DB
-}
+func defFirstParser(t1Id, t2Id int) htmlx.Parser {
+	return func(rawVal string) (any, error) {
+		sideIdentifier := strings.TrimSpace(rawVal)
 
-func NewMatchMapScraper(
-	tx *gorm.DB,
-	mapOverviewNode *goquery.Selection,
-	matchId, team1Id, team2Id int,
-) *MatchMapScraper {
-	return &MatchMapScraper{
-		Data: models.MatchMapSchema{
-			MatchId: matchId,
-			Team1Id: team1Id,
-			Team2Id: team2Id,
-		},
-		MapOverviewNode: mapOverviewNode,
-		Tx:              tx,
+		switch sideIdentifier {
+		case "mod-ct":
+			return t1Id, nil
+		case "mod-t":
+			return t2Id, nil
+		}
+
+		return nil, fmt.Errorf("Can't determine which team def first from class: %s", sideIdentifier)
 	}
 }
 
-func (m *MatchMapScraper) defFirstParser(rawVal string) (any, error) {
-	sideIdentifier := strings.TrimSpace(rawVal)
+func teamPickParser(t1Id, t2Id int) htmlx.Parser {
+	return func(rawVal string) (any, error) {
+		classes := strings.TrimSpace(rawVal)
+		if strings.Contains(classes, "mod-1") {
+			return &t1Id, nil
+		} else if strings.Contains(classes, "mod-2") {
+			return &t2Id, nil
+		}
 
-	switch sideIdentifier {
-	case "mod-ct":
-		return m.Data.Team1Id, nil
-	case "mod-t":
-		return m.Data.Team2Id, nil
+		return nil, nil
 	}
-
-	return nil, fmt.Errorf("Can't determine which team def first from class: %s", sideIdentifier)
-}
-
-func (m *MatchMapScraper) teamPickParser(rawVal string) (any, error) {
-	classes := strings.TrimSpace(rawVal)
-	if strings.Contains(classes, "mod-1") {
-		return &m.Data.Team1Id, nil
-	} else if strings.Contains(classes, "mod-2") {
-		return &m.Data.Team2Id, nil
-	}
-
-	return nil, nil
 }
 
 func durationParser(rawVal string) (any, error) {
@@ -75,32 +59,36 @@ func durationParser(rawVal string) (any, error) {
 	return &duration, nil
 }
 
-func (m *MatchMapScraper) PrettyPrint() error {
-	jsonStr, err := json.MarshalIndent(m.Data, "", "	")
+func MatchMapHandler(sc *piper.Scraper, ctx context.Context, selection *goquery.Selection) error {
+	logrus.Debug("Parsing information from map html content into match map schema")
+
+	matchMapSchema, ok := ctx.Value("matchMapSchema").(*models.MatchMapSchema)
+	if !ok {
+		return fmt.Errorf("Unable to find match map schema")
+	}
+
+	tx, ok := ctx.Value("tx").(*gorm.DB)
+	if !ok {
+		return fmt.Errorf("Unable to find gorm transaction")
+	}
+
+	parsers := map[string]htmlx.Parser{
+		"defFirstParser": defFirstParser(matchMapSchema.Team1Id, matchMapSchema.Team2Id),
+		"durationParser": durationParser,
+		"teamPickParser": teamPickParser(matchMapSchema.Team1Id, matchMapSchema.Team2Id),
+		"mapIdParser":    customparsers.MapIdParser(tx),
+	}
+
+	if err := htmlx.ParseFromSelection(matchMapSchema, selection, htmlx.SetParsers(parsers)); err != nil {
+		return err
+	}
+
+	jsonDat, err := json.MarshalIndent(*matchMapSchema, "", "	")
 	if err != nil {
 		return err
 	}
 
-	fmt.Println(string(jsonStr))
-
-	return nil
-}
-
-func (m *MatchMapScraper) Scrape() error {
-	logrus.Debug("Parsing information from map html content into match map schema")
-	parsers := map[string]htmlx.Parser{
-		"defFirstParser": m.defFirstParser,
-		"durationParser": durationParser,
-		"teamPickParser": m.teamPickParser,
-		"mapIdParser":    customparsers.MapIdParser(m.Tx),
-	}
-
-	if err := htmlx.ParseFromSelection(
-		&m.Data, m.MapOverviewNode,
-		htmlx.SetParsers(parsers),
-	); err != nil {
-		return err
-	}
+	fmt.Println(string(jsonDat))
 
 	return nil
 }

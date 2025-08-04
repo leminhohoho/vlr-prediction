@@ -1,11 +1,14 @@
 package matchmaps
 
 import (
+	"context"
 	"fmt"
 	"net/http"
+	"regexp"
 	"testing"
 
 	"github.com/PuerkitoBio/goquery"
+	"github.com/leminhohoho/vlr-prediction/scraping/pkgs/piper"
 	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/helpers"
 	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/models"
 	"gorm.io/driver/sqlite"
@@ -77,6 +80,24 @@ func TestMatchMapScraper(t *testing.T) {
 
 	tx := db.Begin()
 
+	cache, err := piper.NewCacheDb("/tmp/vlr_cache.db")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err = cache.Validate(); err != nil && err != piper.ErrIncorrectSchema {
+		t.Fatal(err)
+	} else if err == piper.ErrIncorrectSchema {
+		if err = cache.Setup(); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	backend := piper.NewPiperBackend(&http.Client{})
+
+	sc := piper.NewScraper(backend, cache)
+	sc.Handle(regexp.MustCompile(`matchMap`), MatchMapHandler)
+
 	res, err := http.Get("https://www.vlr.gg/510154/gen-g-vs-team-heretics-esports-world-cup-2025-sf")
 	if err != nil {
 		t.Fatal(err)
@@ -95,18 +116,21 @@ func TestMatchMapScraper(t *testing.T) {
 			),
 		)
 
-		m := NewMatchMapScraper(tx, mapNode, testMap.MatchId, testMap.Team1Id, testMap.Team2Id)
+		m := models.MatchMapSchema{
+			MatchId: testMap.MatchId,
+			Team1Id: testMap.Team1Id,
+			Team2Id: testMap.Team2Id,
+		}
 
-		if err := m.Scrape(); err != nil {
+		ctx := context.WithValue(context.Background(), "matchMapSchema", &m)
+		ctx2 := context.WithValue(ctx, "tx", tx)
+
+		if err := sc.Pipe("matchMap", ctx2, mapNode); err != nil {
 			t.Fatal(err)
 		}
 
-		if err := helpers.CompareStructs(testMap, m.Data); err != nil {
+		if err := helpers.CompareStructs(testMap, m); err != nil {
 			t.Error(err)
-		}
-
-		if err := m.PrettyPrint(); err != nil {
-			t.Fatal(err)
 		}
 	}
 }
