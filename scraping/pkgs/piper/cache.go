@@ -47,7 +47,8 @@ type Cache interface {
 	Delete(string) error
 }
 
-// PiperCache is an implementation of [Cache], used as default cache database
+// PiperCache is an implementation of [Cache], used as default cache database.
+// It is safe for concurrent usage.
 type PiperCache struct {
 	mu sync.Mutex
 
@@ -82,8 +83,8 @@ func NewCacheDb(src string) (*PiperCache, error) {
 
 // Validate check whether the cache storage is ready to be used.
 // It return [ErrIncorrectSchema] if the SQLite database schema does not match or fetching the schema return error.
-func (p *PiperCache) Validate() error {
-	cmd := exec.Command("sqlite3", p.src, ".schema")
+func (c *PiperCache) Validate() error {
+	cmd := exec.Command("sqlite3", c.src, ".schema")
 	schemaBytes, err := cmd.Output()
 	if err != nil {
 		return err
@@ -100,29 +101,29 @@ func (p *PiperCache) Validate() error {
 
 // Setup initialize the cache storage by delete the linked database then creating and setting up a new one.
 // It return error if recreating the database or executing the schema on database return error.
-func (p *PiperCache) Setup() error {
+func (c *PiperCache) Setup() error {
 	var err error
 
-	if err := os.Remove(p.src); err != nil {
+	if err := os.Remove(c.src); err != nil {
 		return err
 	}
 
-	p.db, err = gorm.Open(sqlite.Open(p.src), &gormConfig)
+	c.db, err = gorm.Open(sqlite.Open(c.src), &gormConfig)
 	if err != nil {
 		return err
 	}
 
-	if err = p.db.Exec(piperCacheDbSchema).Error; err != nil {
+	if err = c.db.Exec(piperCacheDbSchema).Error; err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (p *PiperCache) update() error {
+func (c *PiperCache) update() error {
 	var rows []piperCacheTable
 
-	if err := p.db.Table("cache").Scan(&rows).Error; err != nil {
+	if err := c.db.Table("cache").Scan(&rows).Error; err != nil {
 		return err
 	}
 
@@ -132,7 +133,7 @@ func (p *PiperCache) update() error {
 			continue
 		}
 
-		if err := p.db.Table("cache").Where("KEY = ?", row.Key).Delete(&piperCacheTable{}).Error; err != nil {
+		if err := c.db.Table("cache").Where("KEY = ?", row.Key).Delete(&piperCacheTable{}).Error; err != nil {
 			return err
 		}
 	}
@@ -141,8 +142,8 @@ func (p *PiperCache) update() error {
 }
 
 // Set implement the [Cache] interface
-func (p *PiperCache) Set(key string, val []byte, duration time.Duration) error {
-	if err := p.update(); err != nil {
+func (c *PiperCache) Set(key string, val []byte, duration time.Duration) error {
+	if err := c.update(); err != nil {
 		return err
 	}
 
@@ -154,7 +155,7 @@ func (p *PiperCache) Set(key string, val []byte, duration time.Duration) error {
 		row.ExpDate = &expDate
 	}
 
-	if err := p.db.Table("cache").Clauses(clause.OnConflict{
+	if err := c.db.Table("cache").Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "KEY"}},
 		DoUpdates: clause.AssignmentColumns([]string{"value"}),
 	}).Create(&row).Error; err != nil {
@@ -165,14 +166,14 @@ func (p *PiperCache) Set(key string, val []byte, duration time.Duration) error {
 }
 
 // Get implement the [Cache] interface
-func (p *PiperCache) Get(key string) ([]byte, error) {
-	if err := p.update(); err != nil {
+func (c *PiperCache) Get(key string) ([]byte, error) {
+	if err := c.update(); err != nil {
 		return nil, err
 	}
 
 	var rs piperCacheTable
 
-	if err := p.db.Table("cache").Where("key = ?", key).First(&rs).Error; err != nil {
+	if err := c.db.Table("cache").Where("key = ?", key).First(&rs).Error; err != nil {
 		return nil, err
 	}
 
@@ -180,12 +181,12 @@ func (p *PiperCache) Get(key string) ([]byte, error) {
 }
 
 // Delete implement the [Cache] interface
-func (p *PiperCache) Delete(key string) error {
-	if err := p.update(); err != nil {
+func (c *PiperCache) Delete(key string) error {
+	if err := c.update(); err != nil {
 		return err
 	}
 
-	if err := p.db.Table("cache").Where("key = ?").Delete(&piperCacheTable{}).Error; err != nil {
+	if err := c.db.Table("cache").Where("key = ?").Delete(&piperCacheTable{}).Error; err != nil {
 		return err
 	}
 
