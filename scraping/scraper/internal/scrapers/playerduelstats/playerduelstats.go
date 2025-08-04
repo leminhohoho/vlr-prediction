@@ -36,17 +36,17 @@ func Handler(sc *piper.Scraper, ctx context.Context, selection *goquery.Selectio
 	var duelFirstKills models.DuelFirstKills
 	var duelOpKills models.DuelOpKills
 
-	logrus.Debug("Getting player duel kills")
+	logrus.Debug("Parsing player duel kills information from html onto match schema")
 	if err := htmlx.ParseFromSelection(&duelKills, duelKillsNode, htmlx.SetParsers(parsers)); err != nil {
 		return err
 	}
 
-	logrus.Debug("Getting player duel first kills")
+	logrus.Debug("Parsing player duel first kills information from html onto match schema")
 	if err := htmlx.ParseFromSelection(&duelFirstKills, duelFirstKillsNode, htmlx.SetParsers(parsers)); err != nil {
 		return err
 	}
 
-	logrus.Debug("Getting player duel op kills")
+	logrus.Debug("Parsing player duel op kills information from html onto match schema")
 	if err := htmlx.ParseFromSelection(&duelOpKills, duelOpKillsNode, htmlx.SetParsers(parsers)); err != nil {
 		return err
 	}

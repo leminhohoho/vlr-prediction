@@ -46,8 +46,7 @@ func ratingParser(rawVal string) (any, error) {
 	return rating, nil
 }
 
-func MatchHandler(sc *piper.Scraper, ctx context.Context, selection *goquery.Selection) error {
-	logrus.Debug("Parsing information from match html content into match schema")
+func Handler(sc *piper.Scraper, ctx context.Context, selection *goquery.Selection) error {
 	matchSchema, ok := ctx.Value("matchSchema").(*models.MatchSchema)
 	if !ok {
 		return fmt.Errorf("Unable to find match schema")
@@ -64,6 +63,7 @@ func MatchHandler(sc *piper.Scraper, ctx context.Context, selection *goquery.Sel
 		"ratingParser": ratingParser,
 	}
 
+	logrus.Debug("Parsing information from html onto match schema")
 	if err := htmlx.ParseFromSelection(matchSchema, selection, htmlx.SetParsers(parsers)); err != nil {
 		return err
 	}

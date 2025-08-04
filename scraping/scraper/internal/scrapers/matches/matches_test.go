@@ -85,7 +85,7 @@ func TestMatchScraper(t *testing.T) {
 	backend := piper.NewPiperBackend(&http.Client{})
 
 	sc := piper.NewScraper(backend, cache)
-	sc.Handle(regexp.MustCompile(`match`), MatchHandler)
+	sc.Handle(regexp.MustCompile(`match`), Handler)
 
 	for _, testMatch := range testMatches {
 		res, err := http.Get(testMatch.Url)

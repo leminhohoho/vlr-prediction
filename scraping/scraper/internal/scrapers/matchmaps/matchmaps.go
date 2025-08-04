@@ -60,8 +60,6 @@ func durationParser(rawVal string) (any, error) {
 }
 
 func MatchMapHandler(sc *piper.Scraper, ctx context.Context, selection *goquery.Selection) error {
-	logrus.Debug("Parsing information from map html content into match map schema")
-
 	matchMapSchema, ok := ctx.Value("matchMapSchema").(*models.MatchMapSchema)
 	if !ok {
 		return fmt.Errorf("Unable to find match map schema")
@@ -79,6 +77,7 @@ func MatchMapHandler(sc *piper.Scraper, ctx context.Context, selection *goquery.
 		"mapIdParser":    customparsers.MapIdParser(tx),
 	}
 
+	logrus.Debug("Parsing information from html onto match map schema")
 	if err := htmlx.ParseFromSelection(matchMapSchema, selection, htmlx.SetParsers(parsers)); err != nil {
 		return err
 	}
