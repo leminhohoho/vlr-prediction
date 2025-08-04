@@ -1,11 +1,14 @@
 package roundstats
 
 import (
+	"context"
 	"fmt"
 	"net/http"
+	"regexp"
 	"testing"
 
 	"github.com/PuerkitoBio/goquery"
+	"github.com/leminhohoho/vlr-prediction/scraping/pkgs/piper"
 	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/helpers"
 	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/models"
 )
@@ -94,6 +97,24 @@ func TestRoundStats(t *testing.T) {
 		},
 	}
 
+	cache, err := piper.NewCacheDb("/tmp/vlr_cache.db")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err = cache.Validate(); err != nil && err != piper.ErrIncorrectSchema {
+		t.Fatal(err)
+	} else if err == piper.ErrIncorrectSchema {
+		if err = cache.Setup(); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	backend := piper.NewPiperBackend(&http.Client{})
+
+	sc := piper.NewScraper(backend, cache)
+	sc.Handle(regexp.MustCompile(`roundStat`), Handler)
+
 	overviewRes, err := http.Get("https://www.vlr.gg/510149/fnatic-vs-karmine-corp-esports-world-cup-2025-qf")
 	if err != nil {
 		t.Fatal(err)
@@ -131,26 +152,23 @@ func TestRoundStats(t *testing.T) {
 			),
 		)
 
-		s := NewScraper(
-			nil,
-			overviewNode,
-			economyNode,
-			testRound.MatchId,
-			testRound.MapId,
-			testRound.Team1Id,
-			testRound.Team2Id,
-		)
+		combined := overviewNode.AddSelection(economyNode)
 
-		if err := s.Scrape(); err != nil {
+		roundStat := models.RoundStatSchema{
+			MatchId: testRound.MatchId,
+			MapId:   testRound.MapId,
+			Team1Id: testRound.Team1Id,
+			Team2Id: testRound.Team2Id,
+		}
+
+		ctx := context.WithValue(context.Background(), "roundStat", &roundStat)
+
+		if err := sc.Pipe("roundStat", ctx, combined); err != nil {
 			t.Fatal(err)
 		}
 
-		if err := helpers.CompareStructs(testRound, s.Data); err != nil {
+		if err := helpers.CompareStructs(testRound, roundStat); err != nil {
 			t.Error(err)
-		}
-
-		if err := s.PrettyPrint(); err != nil {
-			t.Fatal(err)
 		}
 	}
 }
