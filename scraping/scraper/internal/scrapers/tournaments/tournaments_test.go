@@ -1,10 +1,12 @@
 package tournaments
 
 import (
+	"context"
 	"net/http"
+	"regexp"
 	"testing"
 
-	"github.com/PuerkitoBio/goquery"
+	"github.com/leminhohoho/vlr-prediction/scraping/pkgs/piper"
 	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/helpers"
 	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/models"
 )
@@ -48,29 +50,33 @@ func TestTournamentScraper(t *testing.T) {
 		},
 	}
 
+	cache, err := piper.NewCacheDb("/tmp/vlr_cache.db")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err = cache.Validate(); err != nil && err != piper.ErrIncorrectSchema {
+		t.Fatal(err)
+	} else if err == piper.ErrIncorrectSchema {
+		if err = cache.Setup(); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	backend := piper.NewPiperBackend(&http.Client{})
+
+	sc := piper.NewScraper(backend, cache)
+	sc.Handle(regexp.MustCompile(`^https:\/\/www\.vlr\.gg\/event\/[0-9]+\/[a-z0-9\/-]+$`), Handler)
+
 	for _, testTournament := range testTournaments {
-		res, err := http.Get(testTournament.Url)
-		if err != nil {
+		tournamentSchema := models.TournamentSchema{Id: testTournament.Id, Url: testTournament.Url}
+
+		if err := sc.Get(testTournament.Url, context.WithValue(context.Background(), "tournamentSchema", &tournamentSchema), nil); err != nil {
 			t.Fatal(err)
 		}
 
-		doc, err := goquery.NewDocumentFromReader(res.Body)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		s := NewScraper(nil, doc.Selection, testTournament.Id, testTournament.Url)
-
-		if err := s.Scrape(); err != nil {
-			t.Fatal(err)
-		}
-
-		if err := helpers.CompareStructs(s.Data, testTournament); err != nil {
+		if err := helpers.CompareStructs(tournamentSchema, testTournament); err != nil {
 			t.Error(err)
-		}
-
-		if err := s.PrettyPrint(); err != nil {
-			t.Fatal(err)
 		}
 	}
 }
