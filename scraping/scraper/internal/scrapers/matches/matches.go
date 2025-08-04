@@ -1,45 +1,22 @@
 package matches
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/leminhohoho/vlr-prediction/scraping/pkgs/htmlx"
+	"github.com/leminhohoho/vlr-prediction/scraping/pkgs/piper"
 	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/customparsers"
 	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/helpers"
 	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/models"
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
-
-type MatchScraper struct {
-	Data             models.MatchSchema
-	MatchPageContent *goquery.Selection
-	Tx               *gorm.DB
-}
-
-func NewMatchScraper(
-	tx *gorm.DB,
-	htmlContent *goquery.Selection,
-	id int,
-	url string,
-	date time.Time,
-) *MatchScraper {
-	return &MatchScraper{
-		Data: models.MatchSchema{
-			Id:   id,
-			Url:  url,
-			Date: date,
-		},
-		MatchPageContent: htmlContent,
-		Tx:               tx,
-	}
-}
 
 func stageParser(rawVal string) (any, error) {
 	matchHeader := helpers.ToSnakeCase(strings.TrimSpace(rawVal))
@@ -69,28 +46,34 @@ func ratingParser(rawVal string) (any, error) {
 	return rating, nil
 }
 
-func (m *MatchScraper) PrettyPrint() error {
-	jsonStr, err := json.MarshalIndent(m.Data, "", "	")
-	if err != nil {
-		return err
+func MatchHandler(sc *piper.Scraper, ctx context.Context, selection *goquery.Selection) error {
+	logrus.Debug("Parsing information from match html content into match schema")
+	matchSchema, ok := ctx.Value("matchSchema").(*models.MatchSchema)
+	if !ok {
+		return fmt.Errorf("Unable to find match schema")
 	}
 
-	fmt.Println(string(jsonStr))
+	_, ok = ctx.Value("tx").(*gorm.DB)
+	if !ok {
+		return fmt.Errorf("Unable to find gorm transaction")
+	}
 
-	return nil
-}
-
-func (m *MatchScraper) Scrape() error {
-	logrus.Debug("Parsing information from match html content into match schema")
 	parsers := map[string]htmlx.Parser{
 		"idParser":     customparsers.IdParser,
 		"stageParser":  stageParser,
 		"ratingParser": ratingParser,
 	}
 
-	if err := htmlx.ParseFromSelection(&m.Data, m.MatchPageContent, htmlx.SetParsers(parsers)); err != nil {
+	if err := htmlx.ParseFromSelection(matchSchema, selection, htmlx.SetParsers(parsers)); err != nil {
 		return err
 	}
+
+	jsonDat, err := json.MarshalIndent(*matchSchema, "", "	")
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(string(jsonDat))
 
 	return nil
 }

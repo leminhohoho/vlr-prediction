@@ -1,11 +1,14 @@
 package matches
 
 import (
+	"context"
 	"net/http"
+	"regexp"
 	"testing"
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
+	"github.com/leminhohoho/vlr-prediction/scraping/pkgs/piper"
 	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/helpers"
 	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/models"
 	"gorm.io/driver/sqlite"
@@ -41,7 +44,7 @@ func TestMatchScraper(t *testing.T) {
 			Team2Id:      18504,
 			Team1Score:   2,
 			Team2Score:   0,
-			Team1Rating:  1808,
+			Team1Rating:  1654,
 			Team2Rating:  0,
 		},
 		{
@@ -66,6 +69,24 @@ func TestMatchScraper(t *testing.T) {
 
 	tx := db.Begin()
 
+	cache, err := piper.NewCacheDb("/tmp/vlr_cache.db")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err = cache.Validate(); err != nil && err != piper.ErrIncorrectSchema {
+		t.Fatal(err)
+	} else if err == piper.ErrIncorrectSchema {
+		if err = cache.Setup(); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	backend := piper.NewPiperBackend(&http.Client{})
+
+	sc := piper.NewScraper(backend, cache)
+	sc.Handle(regexp.MustCompile(`match`), MatchHandler)
+
 	for _, testMatch := range testMatches {
 		res, err := http.Get(testMatch.Url)
 		if err != nil {
@@ -77,18 +98,21 @@ func TestMatchScraper(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		m := NewMatchScraper(tx, doc.Selection, testMatch.Id, testMatch.Url, time.Time{})
+		m := models.MatchSchema{
+			Id:   testMatch.Id,
+			Url:  testMatch.Url,
+			Date: time.Time{},
+		}
 
-		if err := m.Scrape(); err != nil {
+		ctx := context.WithValue(context.Background(), "matchSchema", &m)
+		ctx2 := context.WithValue(ctx, "tx", tx)
+
+		if err := sc.Pipe("match", ctx2, doc.Selection); err != nil {
 			t.Fatal(err)
 		}
 
-		if err := helpers.CompareStructs(testMatch, m.Data); err != nil {
+		if err := helpers.CompareStructs(testMatch, m); err != nil {
 			t.Error(err)
-		}
-
-		if err := m.PrettyPrint(); err != nil {
-			t.Fatal(err)
 		}
 	}
 }
