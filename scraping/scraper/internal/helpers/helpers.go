@@ -2,6 +2,7 @@ package helpers
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"os"
 	"reflect"
@@ -192,6 +193,17 @@ func CompareStructs(structA any, structB any) error {
 			)
 		}
 	}
+
+	return nil
+}
+
+func PrettyPrintStruct(s any) error {
+	jsonDat, err := json.MarshalIndent(s, "", "	")
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(string(jsonDat))
 
 	return nil
 }

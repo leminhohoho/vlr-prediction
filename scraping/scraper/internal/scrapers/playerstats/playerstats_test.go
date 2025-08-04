@@ -1,11 +1,15 @@
 package playerstats
 
 import (
+	"context"
 	"net/http"
+	"regexp"
 	"testing"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/joho/godotenv"
+	"github.com/leminhohoho/vlr-prediction/scraping/pkgs/piper"
+	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/models"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
@@ -25,6 +29,24 @@ func TestPlayerStat(t *testing.T) {
 	}
 
 	tx := db.Begin()
+
+	cache, err := piper.NewCacheDb("/tmp/vlr_cache.db")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err = cache.Validate(); err != nil && err != piper.ErrIncorrectSchema {
+		t.Fatal(err)
+	} else if err == piper.ErrIncorrectSchema {
+		if err = cache.Setup(); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	backend := piper.NewPiperBackend(&http.Client{})
+
+	sc := piper.NewScraper(backend, cache)
+	sc.Handle(regexp.MustCompile(`playerStats`), Handler)
 
 	res, err := http.Get(
 		"https://www.vlr.gg/490310/paper-rex-vs-gen-g-champions-tour-2025-masters-toronto-r2-1-0",
@@ -53,20 +75,44 @@ func TestPlayerStat(t *testing.T) {
 
 	for i, selector := range selectors {
 		if 0 <= i && i <= 4 {
-			p := NewPlayerOverviewStatScraper(tx, doc.Selection.Find(selector), -1, -1, -1, 4, 12)
-			if err := p.Scrape(); err != nil {
-				t.Fatal(err)
+			data := Data{
+				DefStat: models.PlayerOverviewStatSchema{
+					Side: models.Def,
+				},
+				AtkStat: models.PlayerOverviewStatSchema{
+					Side: models.Atk,
+				},
+				BothSideStat: models.PlayerOverviewStatSchema{
+					Side: models.Side(""),
+				},
+				TeamDefRounds: 4,
+				TeamAtkRounds: 12,
 			}
-			if err := p.PrettyPrint(); err != nil {
+			ctx := context.WithValue(context.Background(), "data", &data)
+			ctx2 := context.WithValue(ctx, "tx", tx)
+
+			if err := sc.Pipe("playerStats", ctx2, doc.Selection.Find(selector)); err != nil {
 				t.Fatal(err)
 			}
 		}
 		if 5 <= i && i <= 9 {
-			p := NewPlayerOverviewStatScraper(tx, doc.Selection.Find(selector), -1, -1, -1, 12, 4)
-			if err := p.Scrape(); err != nil {
-				t.Fatal(err)
+			data := Data{
+				DefStat: models.PlayerOverviewStatSchema{
+					Side: models.Def,
+				},
+				AtkStat: models.PlayerOverviewStatSchema{
+					Side: models.Atk,
+				},
+				BothSideStat: models.PlayerOverviewStatSchema{
+					Side: models.Side(""),
+				},
+				TeamDefRounds: 12,
+				TeamAtkRounds: 4,
 			}
-			if err := p.PrettyPrint(); err != nil {
+			ctx := context.WithValue(context.Background(), "data", &data)
+			ctx2 := context.WithValue(ctx, "tx", tx)
+
+			if err := sc.Pipe("playerStats", ctx2, doc.Selection.Find(selector)); err != nil {
 				t.Fatal(err)
 			}
 		}
