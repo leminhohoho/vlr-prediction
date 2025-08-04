@@ -1,16 +1,19 @@
 package teams
 
 import (
+	"context"
 	"net/http"
 	"os"
+	"regexp"
 	"testing"
 
-	"github.com/PuerkitoBio/goquery"
 	"github.com/jedib0t/go-pretty/table"
 	"github.com/joho/godotenv"
+	"github.com/leminhohoho/vlr-prediction/scraping/pkgs/piper"
 	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/models"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 const (
@@ -33,30 +36,38 @@ func TestTeamScraperWithCountryName(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	db, err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{})
+	db, err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{
+		Logger: logger.Default.LogMode(logger.Silent), // Disable all logs
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	tx := db.Begin()
 
+	cache, err := piper.NewCacheDb("/tmp/vlr_cache.db")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err = cache.Validate(); err != nil && err != piper.ErrIncorrectSchema {
+		t.Fatal(err)
+	} else if err == piper.ErrIncorrectSchema {
+		if err = cache.Setup(); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	backend := piper.NewPiperBackend(&http.Client{})
+	sc := piper.NewScraper(backend, cache)
+	sc.Handle(regexp.MustCompile(`^https:\/\/www\.vlr\.gg\/team\/[0-9]+\/[a-z0-9-]+$`), Handler)
+
 	for _, teamUrl := range teamUrls {
-		res, err := http.Get(teamUrl)
-		if err != nil {
-			t.Fatal(err)
-		}
+		teamSchema := models.TeamSchema{Url: teamUrl}
 
-		doc, err := goquery.NewDocumentFromReader(res.Body)
-		if err != nil {
-			t.Fatal(err)
-		}
+		ctx := context.WithValue(context.Background(), "teamSchema", &teamSchema)
+		ctx2 := context.WithValue(ctx, "tx", tx)
 
-		ts := NewScraper(tx, doc.Selection, 0, teamUrl)
-
-		if err := ts.Scrape(); err != nil {
-			t.Fatal(err)
-		}
-
-		if err := ts.PrettyPrint(); err != nil {
+		if err := sc.Get(teamUrl, ctx2, nil); err != nil {
 			t.Fatal(err)
 		}
 	}
