@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sync"
 
 	"github.com/PuerkitoBio/goquery"
 )
@@ -29,6 +30,8 @@ type Backend interface {
 
 // PiperBackend use [net/http.Client] under the hood.
 type PiperBackend struct {
+	mu sync.Mutex
+
 	client *http.Client
 }
 
@@ -41,6 +44,9 @@ func NewPiperBackend(client *http.Client) *PiperBackend {
 
 // Do implement the [Backend] interface
 func (b *PiperBackend) Do(method, url string, body io.Reader) (*goquery.Selection, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
 	if method == "" {
 		method = "GET"
 	}
