@@ -1,12 +1,14 @@
 package playerhighlights
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/leminhohoho/vlr-prediction/scraping/pkgs/htmlx"
+	"github.com/leminhohoho/vlr-prediction/scraping/pkgs/piper"
 	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/models"
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
@@ -117,4 +119,65 @@ func (p *PlayerHighlightScraper) Scrape() error {
 	}
 
 	return nil
+}
+
+func Handler(sc *piper.Scraper, ctx context.Context, selection *goquery.Selection) error {
+	data, ok := ctx.Value("data").(*Data)
+	if !ok {
+		return fmt.Errorf("Unable to find data for player highlight")
+	}
+
+	_, ok = ctx.Value("tx").(*gorm.DB)
+	if !ok {
+		return fmt.Errorf("Unable to find gorm transaction")
+	}
+
+	logrus.Debug("Getting player highlight round no")
+	if err := htmlx.ParseFromSelection(data, selection, htmlx.SetNoPassThroughStruct(true)); err != nil {
+		return err
+	}
+
+	errChan := make(chan error)
+
+	logrus.Debug("Getting players against ids")
+	go func() {
+		selection.Find(PlayerNameSelector).Each(func(i int, playerNameNode *goquery.Selection) {
+			playerAgainstName := strings.TrimSpace(playerNameNode.Children().Remove().End().Text())
+			if playerAgainstName == "" {
+				errChan <- fmt.Errorf("Player number %d int the highlight log is empty", i)
+				return
+			}
+
+			playerAgainstId, ok := data.OtherTeamHashMap[playerAgainstName]
+			if !ok {
+				errChan <- fmt.Errorf("Player %s is not in the other team", playerAgainstName)
+				return
+			}
+
+			data.HighlightLog = append(data.HighlightLog, models.PlayerHighlightSchema{
+				MatchId:         data.MatchId,
+				MapId:           data.MapId,
+				RoundNo:         data.RoundNo,
+				TeamId:          data.TeamId,
+				PlayerId:        data.PlayerId,
+				HighlightType:   data.HighlightType,
+				PlayerAgainstId: playerAgainstId,
+			})
+
+		})
+
+		jsonDat, err := json.MarshalIndent(*data, "", "	")
+		if err != nil {
+			errChan <- nil
+		}
+
+		fmt.Println(string(jsonDat))
+
+		errChan <- nil
+	}()
+
+	select {
+	case err := <-errChan:
+		return err
+	}
 }

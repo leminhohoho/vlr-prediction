@@ -1,13 +1,22 @@
 package playerhighlights
 
 import (
+	"context"
 	"fmt"
 	"net/http"
+	"regexp"
 	"slices"
 	"testing"
 
 	"github.com/PuerkitoBio/goquery"
+	"github.com/leminhohoho/vlr-prediction/scraping/pkgs/piper"
 	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/models"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
+)
+
+const (
+	dbPath = "/home/leminhohoho/repos/vlr-prediction/database/vlr.db"
 )
 
 func compareHighlights(highlightA, highlightB []models.PlayerHighlightSchema) error {
@@ -98,6 +107,31 @@ func TestPlayerHightlights(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	db, err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tx := db.Begin()
+
+	cache, err := piper.NewCacheDb("/tmp/vlr_cache.db")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err = cache.Validate(); err != nil && err != piper.ErrIncorrectSchema {
+		t.Fatal(err)
+	} else if err == piper.ErrIncorrectSchema {
+		if err = cache.Setup(); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	backend := piper.NewPiperBackend(&http.Client{})
+
+	sc := piper.NewScraper(backend, cache)
+	sc.Handle(regexp.MustCompile("highlights"), Handler)
+
 	p2kNode := doc.Find(
 		"#wrapper > div.col-container > div.col.mod-3 > div:nth-child(6) > div > div.vm-stats-container > div:nth-child(4) > div:nth-child(2) > table > tbody > tr:nth-child(6) > td:nth-child(3) > div > div > div",
 	)
@@ -126,214 +160,39 @@ func TestPlayerHightlights(t *testing.T) {
 		"#wrapper > div.col-container > div.col.mod-3 > div:nth-child(6) > div > div.vm-stats-container > div:nth-child(4) > div:nth-child(2) > table > tbody > tr:nth-child(6) > td:nth-child(11) > div > div > div",
 	)
 
-	for i, p2k := range p2ks {
-		highlightNode := p2kNode.Children().Eq(i)
+	ss := func(testHighlights [][]models.PlayerHighlightSchema, node *goquery.Selection, highlightType models.HighlightType) {
+		for i, testHighlight := range testHighlights {
+			highlightNode := node.Children().Eq(i)
 
-		s := NewScraper(
-			nil,
-			highlightNode,
-			p2k[0].MatchId,
-			p2k[0].MapId,
-			p2k[0].TeamId,
-			p2k[0].PlayerId,
-			models.P2k,
-			otherTeamHashmap,
-		)
+			data := Data{
+				MatchId:          testHighlight[0].MatchId,
+				MapId:            testHighlight[0].MapId,
+				TeamId:           testHighlight[0].TeamId,
+				PlayerId:         testHighlight[0].PlayerId,
+				HighlightType:    highlightType,
+				OtherTeamHashMap: otherTeamHashmap,
+			}
 
-		if err := s.Scrape(); err != nil {
-			t.Fatal(err)
-		}
+			ctx := context.WithValue(context.Background(), "data", &data)
+			ctx2 := context.WithValue(ctx, "tx", tx)
 
-		if err := compareHighlights(p2k, s.Data.HighlightLog); err != nil {
-			t.Error(err)
-		}
+			if err := sc.Pipe("highlights", ctx2, highlightNode); err != nil {
+				t.Fatal(err)
+			}
 
-		if err := s.PrettyPrint(); err != nil {
-			t.Fatal(err)
-		}
-	}
-
-	for i, p3k := range p3ks {
-		highlightNode := p3kNode.Children().Eq(i)
-
-		s := NewScraper(
-			nil,
-			highlightNode,
-			p3k[0].MatchId,
-			p3k[0].MapId,
-			p3k[0].TeamId,
-			p3k[0].PlayerId,
-			models.P3k,
-			otherTeamHashmap,
-		)
-
-		if err := s.Scrape(); err != nil {
-			t.Fatal(err)
-		}
-
-		if err := s.PrettyPrint(); err != nil {
-			t.Fatal(err)
+			if err := compareHighlights(testHighlight, data.HighlightLog); err != nil {
+				t.Error(err)
+			}
 		}
 	}
 
-	for i, p4k := range p4ks {
-		highlightNode := p4kNode.Children().Eq(i)
-
-		s := NewScraper(
-			nil,
-			highlightNode,
-			p4k[0].MatchId,
-			p4k[0].MapId,
-			p4k[0].TeamId,
-			p4k[0].PlayerId,
-			models.P4k,
-			otherTeamHashmap,
-		)
-
-		if err := s.Scrape(); err != nil {
-			t.Fatal(err)
-		}
-
-		if err := s.PrettyPrint(); err != nil {
-			t.Fatal(err)
-		}
-	}
-
-	for i, p5k := range p5ks {
-		highlightNode := p5kNode.Children().Eq(i)
-
-		s := NewScraper(
-			nil,
-			highlightNode,
-			p5k[0].MatchId,
-			p5k[0].MapId,
-			p5k[0].TeamId,
-			p5k[0].PlayerId,
-			models.P5k,
-			otherTeamHashmap,
-		)
-
-		if err := s.Scrape(); err != nil {
-			t.Fatal(err)
-		}
-
-		if err := s.PrettyPrint(); err != nil {
-			t.Fatal(err)
-		}
-	}
-
-	for i, p1v1 := range p1v1s {
-		highlightNode := p1v1Node.Children().Eq(i)
-
-		s := NewScraper(
-			nil,
-			highlightNode,
-			p1v1[0].MatchId,
-			p1v1[0].MapId,
-			p1v1[0].TeamId,
-			p1v1[0].PlayerId,
-			models.P1v1,
-			otherTeamHashmap,
-		)
-
-		if err := s.Scrape(); err != nil {
-			t.Fatal(err)
-		}
-
-		if err := s.PrettyPrint(); err != nil {
-			t.Fatal(err)
-		}
-	}
-
-	for i, p1v2 := range p1v2s {
-		highlightNode := p1v2Node.Children().Eq(i)
-
-		s := NewScraper(
-			nil,
-			highlightNode,
-			p1v2[0].MatchId,
-			p1v2[0].MapId,
-			p1v2[0].TeamId,
-			p1v2[0].PlayerId,
-			models.P1v2,
-			otherTeamHashmap,
-		)
-
-		if err := s.Scrape(); err != nil {
-			t.Fatal(err)
-		}
-
-		if err := s.PrettyPrint(); err != nil {
-			t.Fatal(err)
-		}
-	}
-
-	for i, p1v3 := range p1v3s {
-		highlightNode := p1v3Node.Children().Eq(i)
-
-		s := NewScraper(
-			nil,
-			highlightNode,
-			p1v3[0].MatchId,
-			p1v3[0].MapId,
-			p1v3[0].TeamId,
-			p1v3[0].PlayerId,
-			models.P1v3,
-			otherTeamHashmap,
-		)
-
-		if err := s.Scrape(); err != nil {
-			t.Fatal(err)
-		}
-
-		if err := s.PrettyPrint(); err != nil {
-			t.Fatal(err)
-		}
-	}
-
-	for i, p1v4 := range p1v4s {
-		highlightNode := p1v4Node.Children().Eq(i)
-
-		s := NewScraper(
-			nil,
-			highlightNode,
-			p1v4[0].MatchId,
-			p1v4[0].MapId,
-			p1v4[0].TeamId,
-			p1v4[0].PlayerId,
-			models.P1v4,
-			otherTeamHashmap,
-		)
-
-		if err := s.Scrape(); err != nil {
-			t.Fatal(err)
-		}
-
-		if err := s.PrettyPrint(); err != nil {
-			t.Fatal(err)
-		}
-	}
-
-	for i, p1v5 := range p1v5s {
-		highlightNode := p1v5Node.Children().Eq(i)
-
-		s := NewScraper(
-			nil,
-			highlightNode,
-			p1v5[0].MatchId,
-			p1v5[0].MapId,
-			p1v5[0].TeamId,
-			p1v5[0].PlayerId,
-			models.P1v5,
-			otherTeamHashmap,
-		)
-
-		if err := s.Scrape(); err != nil {
-			t.Fatal(err)
-		}
-
-		if err := s.PrettyPrint(); err != nil {
-			t.Fatal(err)
-		}
-	}
+	ss(p2ks, p2kNode, models.P2k)
+	ss(p3ks, p3kNode, models.P3k)
+	ss(p4ks, p4kNode, models.P4k)
+	ss(p5ks, p5kNode, models.P5k)
+	ss(p1v1s, p1v1Node, models.P1v1)
+	ss(p1v2s, p1v2Node, models.P1v2)
+	ss(p1v3s, p1v3Node, models.P1v3)
+	ss(p1v4s, p1v4Node, models.P1v4)
+	ss(p1v5s, p1v5Node, models.P1v5)
 }
