@@ -2,7 +2,6 @@ package tournaments
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -13,29 +12,11 @@ import (
 	"github.com/leminhohoho/vlr-prediction/scraping/pkgs/piper"
 	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/helpers"
 	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/models"
-	"gorm.io/gorm"
 )
 
 const (
 	tournamentGroupSelector = `#wrapper > div.col-container > div > div.wf-card.mod-event.mod-header.mod-full > div.event-header > div.event-desc > div > div:nth-child(1) > a`
 )
-
-type TournamentScraper struct {
-	Data                  models.TournamentSchema
-	TournamentPageContent *goquery.Selection
-	Tx                    *gorm.DB
-}
-
-func NewScraper(tx *gorm.DB, tournamentPageContent *goquery.Selection, id int, url string) *TournamentScraper {
-	return &TournamentScraper{
-		Data: models.TournamentSchema{
-			Id:  id,
-			Url: url,
-		},
-		TournamentPageContent: tournamentPageContent,
-		Tx:                    tx,
-	}
-}
 
 func moneyParser(rawVal string) (any, error) {
 	moneyStr := strings.TrimSpace(rawVal)
@@ -59,35 +40,6 @@ func tierParser(prizePool int) htmlx.Parser {
 		return regexp.MustCompile(`vct-20[0-9][0-9]`).MatchString(strings.TrimSpace(rawVal)) ||
 			prizePool >= 500000, nil
 	}
-}
-
-func (t *TournamentScraper) tierParser(rawVal string) (any, error) {
-	return regexp.MustCompile(`vct-20[0-9][0-9]`).MatchString(strings.TrimSpace(rawVal)) ||
-		t.Data.PrizePool >= 500000, nil
-}
-
-func (t *TournamentScraper) PrettyPrint() error {
-	jsonStr, err := json.MarshalIndent(t.Data, "", "	")
-	if err != nil {
-		return err
-	}
-
-	fmt.Println(string(jsonStr))
-
-	return nil
-}
-
-func (t *TournamentScraper) Scrape() error {
-	parsers := map[string]htmlx.Parser{
-		"moneyParser": moneyParser,
-		"tierParser":  t.tierParser,
-	}
-
-	if err := htmlx.ParseFromSelection(&t.Data, t.TournamentPageContent, htmlx.SetParsers(parsers)); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func Handler(sc *piper.Scraper, ctx context.Context, selection *goquery.Selection) error {
