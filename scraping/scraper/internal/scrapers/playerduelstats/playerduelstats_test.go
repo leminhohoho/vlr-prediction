@@ -1,14 +1,23 @@
 package playerduelstats
 
 import (
+	"context"
 	"fmt"
 	"net/http"
+	"regexp"
 	"testing"
 
 	"github.com/PuerkitoBio/goquery"
+	"github.com/leminhohoho/vlr-prediction/scraping/pkgs/piper"
 	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/helpers"
 	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/models"
 	"github.com/sirupsen/logrus"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
+)
+
+const (
+	dbPath = "/home/leminhohoho/repos/vlr-prediction/database/vlr.db"
 )
 
 func newTestPlayerDuelStat(
@@ -53,6 +62,31 @@ func TestPlayerDuelStat(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	db, err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tx := db.Begin()
+
+	cache, err := piper.NewCacheDb("/tmp/vlr_cache.db")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err = cache.Validate(); err != nil && err != piper.ErrIncorrectSchema {
+		t.Fatal(err)
+	} else if err == piper.ErrIncorrectSchema {
+		if err = cache.Setup(); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	backend := piper.NewPiperBackend(&http.Client{})
+
+	sc := piper.NewScraper(backend, cache)
+	sc.Handle(regexp.MustCompile(`duelStats`), Handler)
+
 	for i, testDuelStat := range testDuelStats {
 		duelKillsNode := doc.Find(
 			fmt.Sprintf(
@@ -75,27 +109,19 @@ func TestPlayerDuelStat(t *testing.T) {
 			),
 		)
 
-		d := NewPlayerDuelStatScraper(
-			nil,
-			duelKillsNode,
-			duelFirstKillsNode,
-			duelOpKillsNode,
-			testDuelStat.MatchId,
-			testDuelStat.MapId,
-			testDuelStat.Team1PlayerId,
-			testDuelStat.Team2PlayerId,
-		)
+		duelNodes := duelKillsNode.AddSelection(duelFirstKillsNode).AddSelection(duelOpKillsNode)
 
-		if err := d.Scrape(); err != nil {
+		var duelStats models.PlayerDuelStatSchema
+
+		ctx := context.WithValue(context.Background(), "duelStats", &duelStats)
+		ctx2 := context.WithValue(ctx, "tx", tx)
+
+		if err := sc.Pipe("duelStats", ctx2, duelNodes); err != nil {
 			t.Fatal(err)
 		}
 
-		if err := helpers.CompareStructs(testDuelStat, d.Data); err != nil {
+		if err := helpers.CompareStructs(testDuelStat, duelStats); err != nil {
 			t.Error(err)
-		}
-
-		if err := d.PrettyPrint(); err != nil {
-			t.Fatal(err)
 		}
 	}
 }

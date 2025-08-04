@@ -1,83 +1,66 @@
 package playerduelstats
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/leminhohoho/vlr-prediction/scraping/pkgs/htmlx"
+	"github.com/leminhohoho/vlr-prediction/scraping/pkgs/piper"
 	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/models"
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
 
-type PlayerDuelStatScraper struct {
-	Data                     models.PlayerDuelStatSchema
-	PlayerDuelKillsNode      *goquery.Selection
-	PlayerDuelFirstKillsNode *goquery.Selection
-	PlayerDuelOpKillsNode    *goquery.Selection
-	Tx                       *gorm.DB
+var parsers = map[string]htmlx.Parser{
+	"duelParser": htmlx.IfNullParser(0, htmlx.IntParser),
 }
 
-func NewPlayerDuelStatScraper(
-	tx *gorm.DB,
-	playerDuelKillsNode *goquery.Selection,
-	playerDuelFirstKillsNode *goquery.Selection,
-	playerDuelOpKillsNode *goquery.Selection,
-	matchId, mapId, team1PlayerId, team2PlayerId int,
-) *PlayerDuelStatScraper {
-	return &PlayerDuelStatScraper{
-		Data: models.PlayerDuelStatSchema{
-			MatchId:       matchId,
-			MapId:         mapId,
-			Team1PlayerId: team1PlayerId,
-			Team2PlayerId: team2PlayerId,
-		},
-		PlayerDuelKillsNode:      playerDuelKillsNode,
-		PlayerDuelFirstKillsNode: playerDuelFirstKillsNode,
-		PlayerDuelOpKillsNode:    playerDuelOpKillsNode,
-		Tx:                       tx,
-	}
-}
-
-func (p *PlayerDuelStatScraper) PrettyPrint() error {
-	jsonStr, err := json.MarshalIndent(p.Data, "", "	")
-	if err != nil {
-		return err
+func Handler(sc *piper.Scraper, ctx context.Context, selection *goquery.Selection) error {
+	duelStats, ok := ctx.Value("duelStats").(*models.PlayerDuelStatSchema)
+	if !ok {
+		return fmt.Errorf("Unable to find player duel stats")
 	}
 
-	fmt.Println(string(jsonStr))
-
-	return nil
-}
-
-func (p *PlayerDuelStatScraper) Scrape() error {
-	parsers := map[string]htmlx.Parser{
-		"duelParser": htmlx.IfNullParser(0, htmlx.IntParser),
+	_, ok = ctx.Value("tx").(*gorm.DB)
+	if !ok {
+		return fmt.Errorf("Unable to find gorm transaction")
 	}
+
+	duelKillsNode := selection.Eq(0)
+	duelFirstKillsNode := selection.Eq(1)
+	duelOpKillsNode := selection.Eq(2)
 
 	var duelKills models.DuelKills
 	var duelFirstKills models.DuelFirstKills
 	var duelOpKills models.DuelOpKills
 
 	logrus.Debug("Getting player duel kills")
-	if err := htmlx.ParseFromSelection(&duelKills, p.PlayerDuelKillsNode, htmlx.SetParsers(parsers)); err != nil {
+	if err := htmlx.ParseFromSelection(&duelKills, duelKillsNode, htmlx.SetParsers(parsers)); err != nil {
 		return err
 	}
 
 	logrus.Debug("Getting player duel first kills")
-	if err := htmlx.ParseFromSelection(&duelFirstKills, p.PlayerDuelFirstKillsNode, htmlx.SetParsers(parsers)); err != nil {
+	if err := htmlx.ParseFromSelection(&duelFirstKills, duelFirstKillsNode, htmlx.SetParsers(parsers)); err != nil {
 		return err
 	}
 
 	logrus.Debug("Getting player duel op kills")
-	if err := htmlx.ParseFromSelection(&duelOpKills, p.PlayerDuelOpKillsNode, htmlx.SetParsers(parsers)); err != nil {
+	if err := htmlx.ParseFromSelection(&duelOpKills, duelOpKillsNode, htmlx.SetParsers(parsers)); err != nil {
 		return err
 	}
 
-	p.Data.DuelKills = duelKills
-	p.Data.DuelFirstKills = duelFirstKills
-	p.Data.DuelOpKills = duelOpKills
+	duelStats.DuelKills = duelKills
+	duelStats.DuelFirstKills = duelFirstKills
+	duelStats.DuelOpKills = duelOpKills
+
+	jsonDat, err := json.MarshalIndent(*duelStats, "", "	")
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(string(jsonDat))
 
 	return nil
 }
