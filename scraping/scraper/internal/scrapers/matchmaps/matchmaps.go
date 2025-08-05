@@ -47,7 +47,7 @@ func teamPickParser(t1Id, t2Id int) htmlx.Parser {
 func durationParser(rawVal string) (any, error) {
 	timeStr := strings.TrimSpace(rawVal)
 
-	if timeStr == "" {
+	if timeStr == "" || timeStr == "-" {
 		return nil, nil
 	}
 
