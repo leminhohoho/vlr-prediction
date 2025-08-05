@@ -76,15 +76,15 @@ type MapSchema struct {
 type MatchSchema struct {
 	Id           int
 	Url          string
-	Date         time.Time
-	TournamentId int   `selector:"#wrapper > div.col-container > div.col.mod-3 > div.wf-card.match-header > div.match-header-super > div:nth-child(1) > a"                                                                             source:"attr=href" parser:"idParser"`
-	Stage        Stage `selector:"#wrapper > div.col-container > div.col.mod-3 > div.wf-card.mod-color.mod-bg-after-striped_purple.match-header > div.match-header-super > div:nth-child(1) > a > div > div.match-header-event-series"                    parser:"stageParser"`
-	Team1Id      int   `selector:"#wrapper > div.col-container > div.col.mod-3 > div.wf-card.match-header > div.match-header-vs > a.match-header-link.wf-link-hover.mod-1"                                                             source:"attr=href" parser:"idParser"`
-	Team2Id      int   `selector:"#wrapper > div.col-container > div.col.mod-3 > div.wf-card.match-header > div.match-header-vs > a.match-header-link.wf-link-hover.mod-2"                                                             source:"attr=href" parser:"idParser"`
-	Team1Score   int   `selector:"#wrapper > div.col-container > div.col.mod-3 > div.wf-card.match-header > div.match-header-vs > div > div.match-header-vs-score > div:nth-child(1) > span:nth-child(1)"`
-	Team2Score   int   `selector:"#wrapper > div.col-container > div.col.mod-3 > div.wf-card.match-header > div.match-header-vs > div > div.match-header-vs-score > div:nth-child(1) > span:nth-child(3)"`
-	Team1Rating  int   `selector:"#wrapper > div.col-container > div.col.mod-3 > div.wf-card.match-header > div.match-header-vs > a.match-header-link.wf-link-hover.mod-1 > div > div.match-header-link-name-elo"                                         parser:"ratingParser"`
-	Team2Rating  int   `selector:"#wrapper > div.col-container > div.col.mod-3 > div.wf-card.match-header > div.match-header-vs > a.match-header-link.wf-link-hover.mod-2 > div > div.match-header-link-name-elo"                                         parser:"ratingParser"`
+	Date         time.Time `gorm:"type:datetime"`
+	TournamentId int       `                            selector:"#wrapper > div.col-container > div.col.mod-3 > div.wf-card.match-header > div.match-header-super > div:nth-child(1) > a"                                                                             source:"attr=href" parser:"idParser"`
+	Stage        Stage     `                            selector:"#wrapper > div.col-container > div.col.mod-3 > div.wf-card.mod-color.mod-bg-after-striped_purple.match-header > div.match-header-super > div:nth-child(1) > a > div > div.match-header-event-series"                    parser:"stageParser"`
+	Team1Id      int       `gorm:"column:team_1_id"     selector:"#wrapper > div.col-container > div.col.mod-3 > div.wf-card.match-header > div.match-header-vs > a.match-header-link.wf-link-hover.mod-1"                                                             source:"attr=href" parser:"idParser"`
+	Team2Id      int       `gorm:"column:team_2_id"     selector:"#wrapper > div.col-container > div.col.mod-3 > div.wf-card.match-header > div.match-header-vs > a.match-header-link.wf-link-hover.mod-2"                                                             source:"attr=href" parser:"idParser"`
+	Team1Score   int       `gorm:"column:team_1_score"  selector:"#wrapper > div.col-container > div.col.mod-3 > div.wf-card.match-header > div.match-header-vs > div > div.match-header-vs-score > div:nth-child(1) > span:nth-child(1)"`
+	Team2Score   int       `gorm:"column:team_2_score"  selector:"#wrapper > div.col-container > div.col.mod-3 > div.wf-card.match-header > div.match-header-vs > div > div.match-header-vs-score > div:nth-child(1) > span:nth-child(3)"`
+	Team1Rating  int       `gorm:"column:team_1_rating" selector:"#wrapper > div.col-container > div.col.mod-3 > div.wf-card.match-header > div.match-header-vs > a.match-header-link.wf-link-hover.mod-1 > div > div.match-header-link-name-elo"                                         parser:"ratingParser"`
+	Team2Rating  int       `gorm:"column:team_2_rating" selector:"#wrapper > div.col-container > div.col.mod-3 > div.wf-card.match-header > div.match-header-vs > a.match-header-link.wf-link-hover.mod-2 > div > div.match-header-link-name-elo"                                         parser:"ratingParser"`
 }
 
 type BanPickLogSchema struct {
@@ -99,16 +99,16 @@ type MatchMapSchema struct {
 	MatchId       int
 	MapId         int  `selector:"div.vm-stats-game-header > div.map > div:nth-child(1) > span"                       parser:"mapIdParser"`
 	Duration      *int `selector:"div.vm-stats-game-header > div.map > div.map-duration"                              parser:"durationParser"`
-	Team1Id       int
-	Team2Id       int
-	Team1DefScore int  `selector:"div.vm-stats-game-header > div:nth-child(1) > div:nth-child(2) > span.mod-ct"`
-	Team1AtkScore int  `selector:"div.vm-stats-game-header > div:nth-child(1) > div:nth-child(2) > span.mod-t"`
-	Team1OTScore  int  `selector:"div.vm-stats-game-header > div:nth-child(1) > div:nth-child(2) > span.mod-ot"`
-	Team2DefScore int  `selector:"div.vm-stats-game-header > div.team.mod-right > div:nth-child(1) > span.mod-ct"`
-	Team2AtkScore int  `selector:"div.vm-stats-game-header > div.team.mod-right > div:nth-child(1) > span.mod-t"`
-	Team2OTScore  int  `selector:"div.vm-stats-game-header > div.team.mod-right > div:nth-child(1) > span.mod-ot"`
-	TeamDefFirst  int  `selector:"div.vm-stats-game-header > div:nth-child(1) > div:nth-child(2) > span:nth-child(2)" parser:"defFirstParser" source:"attr=class"`
-	TeamPick      *int `selector:"div.vm-stats-game-header > div.map > div:nth-child(1) > span > span.picked"         parser:"teamPickParser" source:"attr=class"`
+	Team1Id       int  `                                                                                                                      gorm:"column:team_1_id"`
+	Team2Id       int  `                                                                                                                      gorm:"column:team_2_id"`
+	Team1DefScore int  `selector:"div.vm-stats-game-header > div:nth-child(1) > div:nth-child(2) > span.mod-ct"                               gorm:"column:team_1_def_score"`
+	Team1AtkScore int  `selector:"div.vm-stats-game-header > div:nth-child(1) > div:nth-child(2) > span.mod-t"                                gorm:"column:team_1_atk_score"`
+	Team1OTScore  int  `selector:"div.vm-stats-game-header > div:nth-child(1) > div:nth-child(2) > span.mod-ot"                               gorm:"column:team_1_ot_score"`
+	Team2DefScore int  `selector:"div.vm-stats-game-header > div.team.mod-right > div:nth-child(1) > span.mod-ct"                             gorm:"column:team_2_def_score"`
+	Team2AtkScore int  `selector:"div.vm-stats-game-header > div.team.mod-right > div:nth-child(1) > span.mod-t"                              gorm:"column:team_2_atk_score"`
+	Team2OTScore  int  `selector:"div.vm-stats-game-header > div.team.mod-right > div:nth-child(1) > span.mod-ot"                             gorm:"column:team_2_ot_score"`
+	TeamDefFirst  int  `selector:"div.vm-stats-game-header > div:nth-child(1) > div:nth-child(2) > span:nth-child(2)" parser:"defFirstParser"                                source:"attr=class"`
+	TeamPick      *int `selector:"div.vm-stats-game-header > div.map > div:nth-child(1) > span > span.picked"         parser:"teamPickParser"                                source:"attr=class"`
 }
 
 type PlayerSchema struct {

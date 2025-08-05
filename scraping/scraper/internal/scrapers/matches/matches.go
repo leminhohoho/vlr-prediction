@@ -18,6 +18,11 @@ import (
 	"gorm.io/gorm"
 )
 
+const (
+	matchMapSelector        = `#wrapper > div.col-container > div.col.mod-3 > div:nth-child(6) > div > div.vm-stats-container > div[data-game-id="%s"]:has(div+div)`
+	matchMapGenericSelector = `#wrapper > div.col-container > div.col.mod-3 > div:nth-child(6) > div > div.vm-stats-container > div[data-game-id!="all"]:has(div+div)`
+)
+
 func stageParser(rawVal string) (any, error) {
 	matchHeader := helpers.ToSnakeCase(strings.TrimSpace(rawVal))
 	if strings.Contains(matchHeader, "grand_final") {
@@ -52,10 +57,14 @@ func Handler(sc *piper.Scraper, ctx context.Context, selection *goquery.Selectio
 		return fmt.Errorf("Unable to find match schema")
 	}
 
-	_, ok = ctx.Value("tx").(*gorm.DB)
+	tx, ok := ctx.Value("tx").(*gorm.DB)
 	if !ok {
 		return fmt.Errorf("Unable to find gorm transaction")
 	}
+
+	overviewContent := selection.Eq(0)
+	performanceContent := selection.Eq(1)
+	economyContent := selection.Eq(2)
 
 	parsers := map[string]htmlx.Parser{
 		"idParser":     customparsers.IdParser,
@@ -64,7 +73,7 @@ func Handler(sc *piper.Scraper, ctx context.Context, selection *goquery.Selectio
 	}
 
 	logrus.Debug("Parsing information from html onto match schema")
-	if err := htmlx.ParseFromSelection(matchSchema, selection, htmlx.SetParsers(parsers)); err != nil {
+	if err := htmlx.ParseFromSelection(matchSchema, overviewContent, htmlx.SetParsers(parsers)); err != nil {
 		return err
 	}
 
@@ -75,5 +84,49 @@ func Handler(sc *piper.Scraper, ctx context.Context, selection *goquery.Selectio
 
 	fmt.Println(string(jsonDat))
 
-	return nil
+	logrus.Debug("Saving match to db")
+	if err := tx.Table("matches").Create(matchSchema).Error; err != nil {
+		return err
+	}
+
+	logrus.Debug("Locating maps nodes")
+
+	errChan := make(chan error)
+
+	go func() {
+		overviewContent.Find(matchMapGenericSelector).Each(func(_ int, mapOverviewNode *goquery.Selection) {
+			gameId, exists := mapOverviewNode.Attr("data-game-id")
+			if !exists {
+				errChan <- fmt.Errorf("Unable to find game id")
+				html, _ := mapOverviewNode.Html()
+				fmt.Println(html)
+				return
+			}
+
+			mapPerformanceNode := performanceContent.Find(fmt.Sprintf(matchMapSelector, gameId))
+			mapEconomyNode := economyContent.Find(fmt.Sprintf(matchMapSelector, gameId))
+
+			combined := mapOverviewNode.AddSelection(mapPerformanceNode).AddSelection(mapEconomyNode)
+
+			matchMap := models.MatchMapSchema{
+				MatchId: matchSchema.Id,
+				Team1Id: matchSchema.Team1Id,
+				Team2Id: matchSchema.Team2Id,
+			}
+
+			ctx := context.WithValue(context.WithValue(context.Background(), "matchMapSchema", &matchMap), "tx", tx)
+
+			if err := sc.Pipe("matchMaps", ctx, combined); err != nil {
+				errChan <- err
+				return
+			}
+		})
+
+		errChan <- nil
+	}()
+
+	select {
+	case err := <-errChan:
+		return err
+	}
 }

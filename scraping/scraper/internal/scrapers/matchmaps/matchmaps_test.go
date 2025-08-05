@@ -96,7 +96,7 @@ func TestMatchMapScraper(t *testing.T) {
 	backend := piper.NewPiperBackend(&http.Client{})
 
 	sc := piper.NewScraper(backend, cache)
-	sc.Handle(regexp.MustCompile(`matchMap`), MatchMapHandler)
+	sc.Handle(regexp.MustCompile(`matchMap`), Handler)
 
 	res, err := http.Get("https://www.vlr.gg/510154/gen-g-vs-team-heretics-esports-world-cup-2025-sf")
 	if err != nil {
@@ -111,7 +111,7 @@ func TestMatchMapScraper(t *testing.T) {
 	for i, testMap := range testMaps {
 		mapNode := doc.Find(
 			fmt.Sprintf(
-				`#wrapper > div.col-container > div.col.mod-3 > div:nth-child(6) > div > div.vm-stats-container > div[data-game-id="%d"]`,
+				`#wrapper > div.col-container > div.col.mod-3 > div:nth-child(6) > div > div.vm-stats-container > div[data-game-id="%d"]:has(div+div)`,
 				testGamesId[i],
 			),
 		)

@@ -16,10 +16,10 @@ const (
 	Tournaments
 	Players
 
-	matchUrlPattern  = `^\/[0-9]+\/[a-zA-Z0-9-]+$`
-	playerUrlPattern = `^\/player\/[0-9]+\/[a-zA-Z0-9-]+$`
-	teamUrlPattern   = `^\/team\/[0-9]+\/[a-zA-Z0-9-]+$`
-	eventUrlPattern  = `^\/event\/[0-9]+\/[a-zA-Z0-9-]+\/?[a-zA-Z0-9-]*$`
+	matchUrlPattern  = `^\/[0-9]+\/[a-zA-Z0-9-]*$`
+	playerUrlPattern = `^\/player\/[0-9]+\/[a-zA-Z0-9-]*$`
+	teamUrlPattern   = `^\/team\/[0-9]+\/[a-zA-Z0-9-]*$`
+	eventUrlPattern  = `^\/event\/[0-9]+\/[a-zA-Z0-9-]*\/?[a-zA-Z0-9-]*$`
 )
 
 func getMatchId(urlStr string) int {

@@ -59,7 +59,7 @@ func durationParser(rawVal string) (any, error) {
 	return &duration, nil
 }
 
-func MatchMapHandler(sc *piper.Scraper, ctx context.Context, selection *goquery.Selection) error {
+func Handler(sc *piper.Scraper, ctx context.Context, selection *goquery.Selection) error {
 	matchMapSchema, ok := ctx.Value("matchMapSchema").(*models.MatchMapSchema)
 	if !ok {
 		return fmt.Errorf("Unable to find match map schema")
@@ -77,8 +77,12 @@ func MatchMapHandler(sc *piper.Scraper, ctx context.Context, selection *goquery.
 		"mapIdParser":    customparsers.MapIdParser(tx),
 	}
 
+	mapOverviewNode := selection.Eq(0)
+	// mapPerformanceNode := selection.Eq(1)
+	// mapEconomyNode := selection.Eq(2)
+
 	logrus.Debug("Parsing information from html onto match map schema")
-	if err := htmlx.ParseFromSelection(matchMapSchema, selection, htmlx.SetParsers(parsers)); err != nil {
+	if err := htmlx.ParseFromSelection(matchMapSchema, mapOverviewNode, htmlx.SetParsers(parsers)); err != nil {
 		return err
 	}
 
@@ -88,6 +92,11 @@ func MatchMapHandler(sc *piper.Scraper, ctx context.Context, selection *goquery.
 	}
 
 	fmt.Println(string(jsonDat))
+
+	logrus.Debug("Saving match map to db")
+	if err := tx.Table("match_maps").Create(matchMapSchema).Error; err != nil {
+		return err
+	}
 
 	return nil
 }

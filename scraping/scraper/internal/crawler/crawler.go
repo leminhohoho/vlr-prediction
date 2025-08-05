@@ -261,6 +261,30 @@ func CrawlMatches(tmpCacheDbPath, vlrDbPath string) ([]MatchToBeScraped, error) 
 	}
 	defer tmpCacheDb.Close()
 
+	var matchesToBeScraped []MatchToBeScraped
+
+	logrus.Debug("Retrieve matches from caches")
+	rows, err := tmpCacheDb.Query("SELECT urL, date FROM matches_to_be_scraped ORDER BY date DESC")
+	if err != nil {
+		return nil, err
+	}
+
+	for rows.Next() {
+		var matchToBeScraped MatchToBeScraped
+		var dateStr string
+
+		if err := rows.Scan(&matchToBeScraped.Url, &dateStr); err != nil {
+			return nil, err
+		}
+
+		matchToBeScraped.Date, err = time.Parse("2006-01-02 15:04:05+00:00", dateStr)
+		if err != nil {
+			return nil, err
+		}
+
+		matchesToBeScraped = append(matchesToBeScraped, matchToBeScraped)
+	}
+
 	logrus.Debug("Connecting to vlr db")
 	vlrDb, err := sql.Open("sqlite3", vlrDbPath)
 	if err != nil {
@@ -275,13 +299,13 @@ func CrawlMatches(tmpCacheDbPath, vlrDbPath string) ([]MatchToBeScraped, error) 
 	}
 
 	logrus.Debugf("Start scraping matches after %s", dateLimit.Format(dateLayout))
-	matchesToBeScraped, err := crawlMatchesUpToDate(dateLimit)
+	newMatchesToBeScraped, err := crawlMatchesUpToDate(dateLimit)
 	if err != nil {
 		return nil, err
 	}
 
 	logrus.Debug("Insert the matches to cache db")
-	for _, matchToBeScraped := range matchesToBeScraped {
+	for _, matchToBeScraped := range newMatchesToBeScraped {
 		if _, err = tmpCacheDb.Exec(
 			"INSERT INTO matches_to_be_scraped(url, date) VALUES(?,?)",
 			matchToBeScraped.Url, matchToBeScraped.Date,
@@ -289,6 +313,8 @@ func CrawlMatches(tmpCacheDbPath, vlrDbPath string) ([]MatchToBeScraped, error) 
 			return nil, err
 		}
 	}
+
+	matchesToBeScraped = append(matchesToBeScraped, newMatchesToBeScraped...)
 
 	return matchesToBeScraped, nil
 }
