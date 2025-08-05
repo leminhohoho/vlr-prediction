@@ -17,6 +17,7 @@ import (
 	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/models"
 	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/scrapers/matches"
 	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/scrapers/matchmaps"
+	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/scrapers/teams"
 	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/utils/urlinfo"
 	"github.com/sirupsen/logrus"
 	"gorm.io/driver/sqlite"
@@ -55,8 +56,9 @@ func main() {
 	backend := piper.NewPiperBackend(&http.Client{})
 
 	sc := piper.NewScraper(backend, cache)
-	sc.Handle(regexp.MustCompile(`^https:\/\/www\.vlr\.gg\/[0-9]+\/[a-z0-9\/-]+$`), matches.Handler)
+	sc.Handle(regexp.MustCompile(`^https:\/\/www\.vlr\.gg\/[0-9]+\/[a-z0-9\/-]*$`), matches.Handler)
 	sc.Handle(regexp.MustCompile(`matchMaps`), matchmaps.Handler)
+	sc.Handle(regexp.MustCompile(`^https:\/\/www\.vlr\.gg\/team\/[0-9]+\/[a-z0-9\/-]*$`), teams.Handler)
 
 	matchesToBeScraped, err := crawler.CrawlMatches(
 		path.Join(os.Getenv("TMP_DIR"), "vlr_cache.db"),
@@ -65,6 +67,8 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	var errs []error
 
 	for i, matchToBeScraped := range matchesToBeScraped {
 		urlInfo, err := urlinfo.ExtractUrlInfo(matchToBeScraped.Url)
@@ -138,11 +142,17 @@ func main() {
 			return nil
 		}); err != nil {
 			logrus.Error(err)
+			errs = append(errs, err)
 			continue
 		}
 
 		if _, err := cacheDb.Exec("DELETE FROM matches_to_be_scraped WHERE url = ?", matchToBeScraped.Url); err != nil {
 			logrus.Errorf("Error deleting match from cache: '%s', skip to next match", err.Error())
 		}
+	}
+
+	fmt.Println("=========================== ERROR ===========================")
+	for _, err := range errs {
+		logrus.Error(err)
 	}
 }

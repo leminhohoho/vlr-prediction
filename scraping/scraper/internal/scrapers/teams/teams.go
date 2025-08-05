@@ -13,6 +13,7 @@ import (
 	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/repos/countryrepo"
 	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/repos/regionrepo"
 	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/utils/geographyinfo"
+	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
 
@@ -99,6 +100,12 @@ func Handler(sc *piper.Scraper, ctx context.Context, selection *goquery.Selectio
 		return err
 	}
 
+	if (*teamSchema.ShorthandName == "" || teamSchema.ShorthandName == nil) &&
+		!strings.Contains(teamSchema.Name, " ") &&
+		len(teamSchema.Name) <= 4 {
+		teamSchema.ShorthandName = &teamSchema.Name
+	}
+
 	teamLoc := strings.TrimSpace(selection.Find(teamLocSel).Clone().Children().Remove().End().Text())
 
 	if teamSchema.CountryId, err = getCountryInfo(tx, teamLoc); err != nil && err != geographyinfo.ErrNotFound {
@@ -110,6 +117,11 @@ func Handler(sc *piper.Scraper, ctx context.Context, selection *goquery.Selectio
 	}
 
 	if err := helpers.PrettyPrintStruct(teamSchema); err != nil {
+		return err
+	}
+
+	logrus.Debug("Saving team info to db")
+	if err := tx.Table("teams").Create(teamSchema).Error; err != nil {
 		return err
 	}
 

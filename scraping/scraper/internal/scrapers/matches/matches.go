@@ -90,13 +90,35 @@ func Handler(sc *piper.Scraper, ctx context.Context, selection *goquery.Selectio
 		return err
 	}
 
+	for _, teamId := range [2]int{matchSchema.Team1Id, matchSchema.Team2Id} {
+		logrus.Debugf("Checking if team with id %d already exists", teamId)
+		var exists bool
+		if err := tx.Table("teams").Select("count(*) > 0").Where("id = ?", teamId).Find(&exists).Error; err != nil {
+			return err
+		}
+
+		if exists {
+			logrus.Warnf("Team with id %d exists, continue", teamId)
+			continue
+		}
+
+		logrus.Debugf("Scraping team %d", teamId)
+		teamSchema := models.TeamSchema{Id: teamId, Url: fmt.Sprintf("https://www.vlr.gg/team/%d/", teamId)}
+
+		teamCtx := context.WithValue(context.WithValue(context.Background(), "teamSchema", &teamSchema), "tx", tx)
+
+		if err := sc.Get(teamSchema.Url, teamCtx, nil); err != nil {
+			return err
+		}
+	}
+
 	logrus.Debug("Locating maps nodes")
 
 	errChan := make(chan error)
 
-	var mu sync.Mutex
-
 	go func() {
+		var mu sync.Mutex
+
 		overviewContent.Find(matchMapGenericSelector).Each(func(_ int, mapOverviewNode *goquery.Selection) {
 			mu.Lock()
 
