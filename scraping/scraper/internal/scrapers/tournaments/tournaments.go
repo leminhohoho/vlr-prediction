@@ -12,6 +12,8 @@ import (
 	"github.com/leminhohoho/vlr-prediction/scraping/pkgs/piper"
 	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/helpers"
 	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/models"
+	"github.com/sirupsen/logrus"
+	"gorm.io/gorm"
 )
 
 const (
@@ -35,23 +37,16 @@ func moneyParser(rawVal string) (any, error) {
 	return prize, nil
 }
 
-func tierParser(prizePool int) htmlx.Parser {
-	return func(rawVal string) (any, error) {
-		return regexp.MustCompile(`vct-20[0-9][0-9]`).MatchString(strings.TrimSpace(rawVal)) ||
-			prizePool >= 500000, nil
-	}
-}
-
 func Handler(sc *piper.Scraper, ctx context.Context, selection *goquery.Selection) error {
 	tournamentSchema, ok := ctx.Value("tournamentSchema").(*models.TournamentSchema)
 	if !ok {
 		return fmt.Errorf("Unable to find the tournament schema")
 	}
 
-	// _, ok = ctx.Value("tx").(*gorm.DB)
-	// if !ok {
-	// 	return fmt.Errorf("Unable to find gorm transaction")
-	// }
+	tx, ok := ctx.Value("tx").(*gorm.DB)
+	if !ok {
+		return fmt.Errorf("Unable to find gorm transaction")
+	}
 
 	if err := htmlx.ParseFromSelection(tournamentSchema, selection, htmlx.SetParsers(map[string]htmlx.Parser{
 		"moneyParser": moneyParser,
@@ -65,6 +60,11 @@ func Handler(sc *piper.Scraper, ctx context.Context, selection *goquery.Selectio
 		tournamentSchema.PrizePool >= 500000
 
 	if err := helpers.PrettyPrintStruct(tournamentSchema); err != nil {
+		return err
+	}
+
+	logrus.Debug("Saving tournament to db")
+	if err := tx.Table("tournaments").Create(tournamentSchema).Error; err != nil {
 		return err
 	}
 

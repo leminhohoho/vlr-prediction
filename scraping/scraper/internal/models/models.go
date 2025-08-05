@@ -212,5 +212,5 @@ type TournamentSchema struct {
 	Name      string `selector:"#wrapper > div.col-container > div > div.wf-card.mod-event.mod-header.mod-full > div.event-header > div.event-desc > div > h1"`
 	Url       string
 	PrizePool int  `selector:"#wrapper > div.col-container > div > div.wf-card.mod-event.mod-header.mod-full > div.event-header > div.event-desc > div > div.event-desc-items > div:nth-child(2) > div.event-desc-item-value" parser:"moneyParser"`
-	Tier1     bool `selector:"#wrapper > div.col-container > div > div.wf-card.mod-event.mod-header.mod-full > div.event-header > div.event-desc > div > div:nth-child(1) > a"                                                parser:"tierParser"  source:"attr=href"`
+	Tier1     bool `gorm:"column:tier_1"`
 }

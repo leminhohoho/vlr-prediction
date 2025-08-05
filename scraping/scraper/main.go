@@ -18,6 +18,7 @@ import (
 	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/scrapers/matches"
 	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/scrapers/matchmaps"
 	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/scrapers/teams"
+	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/scrapers/tournaments"
 	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/utils/urlinfo"
 	"github.com/sirupsen/logrus"
 	"gorm.io/driver/sqlite"
@@ -59,6 +60,7 @@ func main() {
 	sc.Handle(regexp.MustCompile(`^https:\/\/www\.vlr\.gg\/[0-9]+\/[a-z0-9\/-]*$`), matches.Handler)
 	sc.Handle(regexp.MustCompile(`matchMaps`), matchmaps.Handler)
 	sc.Handle(regexp.MustCompile(`^https:\/\/www\.vlr\.gg\/team\/[0-9]+\/[a-z0-9\/-]*$`), teams.Handler)
+	sc.Handle(regexp.MustCompile(`^https:\/\/www\.vlr\.gg\/event\/[0-9]+\/[a-z0-9\/-]*$`), tournaments.Handler)
 
 	matchesToBeScraped, err := crawler.CrawlMatches(
 		path.Join(os.Getenv("TMP_DIR"), "vlr_cache.db"),

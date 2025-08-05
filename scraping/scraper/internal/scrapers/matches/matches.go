@@ -112,6 +112,31 @@ func Handler(sc *piper.Scraper, ctx context.Context, selection *goquery.Selectio
 		}
 	}
 
+	logrus.Debugf("Check if tournament with id %d already exists", matchSchema.TournamentId)
+	var tournamentExists bool
+	if err := tx.Table("tournaments").Select("count(*) > 0").Where("id = ?", matchSchema.TournamentId).Find(&tournamentExists).Error; err != nil {
+		return err
+	}
+
+	if !tournamentExists {
+		logrus.Debugf("Scraping tournament %d", matchSchema.TournamentId)
+		tournamentUrl := fmt.Sprintf("https://www.vlr.gg/event/%d/", matchSchema.TournamentId)
+
+		tournamentSchema := models.TournamentSchema{Id: matchSchema.TournamentId, Url: tournamentUrl}
+
+		tournamentCtx := context.WithValue(
+			context.WithValue(context.Background(), "tournamentSchema", &tournamentSchema),
+			"tx",
+			tx,
+		)
+
+		if err := sc.Get(tournamentUrl, tournamentCtx, nil); err != nil {
+			return err
+		}
+	} else {
+		logrus.Warnf("tournament with id %d already exists, continue", matchSchema.TournamentId)
+	}
+
 	logrus.Debug("Locating maps nodes")
 
 	errChan := make(chan error)
