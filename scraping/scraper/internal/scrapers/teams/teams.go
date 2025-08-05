@@ -100,7 +100,7 @@ func Handler(sc *piper.Scraper, ctx context.Context, selection *goquery.Selectio
 		return err
 	}
 
-	if (*teamSchema.ShorthandName == "" || teamSchema.ShorthandName == nil) &&
+	if (teamSchema.ShorthandName == nil || *teamSchema.ShorthandName == "") &&
 		!strings.Contains(teamSchema.Name, " ") &&
 		len(teamSchema.Name) <= 4 {
 		teamSchema.ShorthandName = &teamSchema.Name
