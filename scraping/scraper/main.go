@@ -141,8 +141,6 @@ func main() {
 			continue
 		}
 
-		ctx = context.WithValue(context.WithValue(ctx, "matchSchema", &matchSchema), "tx", vlrDb.Begin())
-
 		if _, err := cacheDb.Exec("DELETE FROM matches_to_be_scraped WHERE url = ?", matchToBeScraped.Url); err != nil {
 			logrus.Errorf("Error deleting match from cache: '%s', skip to next match", err.Error())
 		}

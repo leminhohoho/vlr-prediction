@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/leminhohoho/vlr-prediction/scraping/pkgs/htmlx"
@@ -93,8 +94,12 @@ func Handler(sc *piper.Scraper, ctx context.Context, selection *goquery.Selectio
 
 	errChan := make(chan error)
 
+	var mu sync.Mutex
+
 	go func() {
 		overviewContent.Find(matchMapGenericSelector).Each(func(_ int, mapOverviewNode *goquery.Selection) {
+			mu.Lock()
+
 			gameId, exists := mapOverviewNode.Attr("data-game-id")
 			if !exists {
 				errChan <- fmt.Errorf("Unable to find game id")
@@ -120,6 +125,8 @@ func Handler(sc *piper.Scraper, ctx context.Context, selection *goquery.Selectio
 				errChan <- err
 				return
 			}
+
+			mu.Unlock()
 		})
 
 		errChan <- nil
