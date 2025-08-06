@@ -182,17 +182,17 @@ type RoundOverviewSchema struct {
 
 type RoundEconomySchema struct {
 	TeamDef      int     `selector:"div.rnd-sq.mod-win"      source:"attr=class" parser:"teamDefParser"`
-	Team1BuyType BuyType `selector:"div.rnd-sq:nth-child(3)"                     parser:"buyTypeParser"`
-	Team2BuyType BuyType `selector:"div.rnd-sq:nth-child(4)"                     parser:"buyTypeParser"`
-	Team1Bank    int     `selector:"div.bank:nth-child(2)"                       parser:"balanceParser"`
-	Team2Bank    int     `selector:"div.bank:nth-child(5)"                       parser:"balanceParser"`
+	Team1BuyType BuyType `selector:"div.rnd-sq:nth-child(3)"                     parser:"buyTypeParser" gorm:"column:team_1_buy_type"`
+	Team2BuyType BuyType `selector:"div.rnd-sq:nth-child(4)"                     parser:"buyTypeParser" gorm:"column:team_2_buy_type"`
+	Team1Bank    int     `selector:"div.bank:nth-child(2)"                       parser:"balanceParser" gorm:"column:team_1_bank"`
+	Team2Bank    int     `selector:"div.bank:nth-child(5)"                       parser:"balanceParser" gorm:"column:team_2_bank"`
 }
 
 type RoundStatSchema struct {
 	MatchId int
 	MapId   int
-	Team1Id int
-	Team2Id int
+	Team1Id int `gorm:"column:team_1_id"`
+	Team2Id int `gorm:"column:team_2_id"`
 	RoundOverviewSchema
 	RoundEconomySchema
 }

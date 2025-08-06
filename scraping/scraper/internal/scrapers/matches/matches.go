@@ -158,7 +158,7 @@ func Handler(sc *piper.Scraper, ctx context.Context, selection *goquery.Selectio
 			mapPerformanceNode := performanceContent.Find(fmt.Sprintf(matchMapSelector, gameId))
 			mapEconomyNode := economyContent.Find(fmt.Sprintf(matchMapSelector, gameId))
 
-			combined := mapOverviewNode.AddSelection(mapPerformanceNode).AddSelection(mapEconomyNode)
+			combined := mapOverviewNode.Clone().AddSelection(mapPerformanceNode).AddSelection(mapEconomyNode)
 
 			matchMap := models.MatchMapSchema{
 				MatchId: matchSchema.Id,

@@ -8,9 +8,9 @@ import (
 	"github.com/PuerkitoBio/goquery"
 	"github.com/leminhohoho/vlr-prediction/scraping/pkgs/htmlx"
 	"github.com/leminhohoho/vlr-prediction/scraping/pkgs/piper"
-	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/helpers"
 	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/models"
 	"github.com/sirupsen/logrus"
+	"gorm.io/gorm"
 )
 
 func teamWonParser(t1Id, t2Id int) htmlx.Parser {
@@ -101,10 +101,10 @@ func Handler(sc *piper.Scraper, ctx context.Context, selection *goquery.Selectio
 		return fmt.Errorf("Unable to find round stats")
 	}
 
-	// _, ok = ctx.Value("tx").(*gorm.DB)
-	// if !ok {
-	// 	return fmt.Errorf("Unable to find the transaction")
-	// }
+	tx, ok := ctx.Value("tx").(*gorm.DB)
+	if !ok {
+		return fmt.Errorf("Unable to find the transaction")
+	}
 
 	logrus.Debug("Scraping round overview info")
 	var roundOverviewSchema models.RoundOverviewSchema
@@ -135,7 +135,8 @@ func Handler(sc *piper.Scraper, ctx context.Context, selection *goquery.Selectio
 
 	roundStats.RoundEconomySchema = roundEconomySchema
 
-	if err := helpers.PrettyPrintStruct(roundStats); err != nil {
+	logrus.Debug("Saving round stats to db")
+	if err := tx.Table("round_stats").Create(roundStats).Error; err != nil {
 		return err
 	}
 

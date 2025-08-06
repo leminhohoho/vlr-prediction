@@ -16,6 +16,11 @@ import (
 	"gorm.io/gorm"
 )
 
+const (
+	roundOverviewSelector = `div:nth-child(2) > div > div > div.vlr-rounds-row > div:has(div.rnd-sq.mod-win)`
+	roundEconomySelector  = `div:nth-child(3) > table > tbody > tr > td:has(div.rnd-sq)`
+)
+
 func defFirstParser(t1Id, t2Id int) htmlx.Parser {
 	return func(rawVal string) (any, error) {
 		sideIdentifier := strings.TrimSpace(rawVal)
@@ -79,7 +84,7 @@ func Handler(sc *piper.Scraper, ctx context.Context, selection *goquery.Selectio
 
 	mapOverviewNode := selection.Eq(0)
 	// mapPerformanceNode := selection.Eq(1)
-	// mapEconomyNode := selection.Eq(2)
+	mapEconomyNode := selection.Eq(2)
 
 	logrus.Debug("Parsing information from html onto match map schema")
 	if err := htmlx.ParseFromSelection(matchMapSchema, mapOverviewNode, htmlx.SetParsers(parsers)); err != nil {
@@ -95,6 +100,11 @@ func Handler(sc *piper.Scraper, ctx context.Context, selection *goquery.Selectio
 
 	logrus.Debug("Saving match map to db")
 	if err := tx.Table("match_maps").Create(matchMapSchema).Error; err != nil {
+		return err
+	}
+
+	logrus.Debug("Scraping rounds stats")
+	if err := scrapeRoundsStats(tx, sc, *matchMapSchema, mapOverviewNode, mapEconomyNode); err != nil {
 		return err
 	}
 
