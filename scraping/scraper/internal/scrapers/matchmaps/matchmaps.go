@@ -108,5 +108,14 @@ func Handler(sc *piper.Scraper, ctx context.Context, selection *goquery.Selectio
 		return err
 	}
 
+	logrus.Debug("Scraping players overview stats")
+	t1Hashmap, t2Hashmap, err := scrapePlayersStats(tx, sc, *matchMapSchema, mapOverviewNode)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(t1Hashmap)
+	fmt.Println(t2Hashmap)
+
 	return nil
 }

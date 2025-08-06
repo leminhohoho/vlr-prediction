@@ -141,5 +141,15 @@ func Handler(sc *piper.Scraper, ctx context.Context, selection *goquery.Selectio
 		return err
 	}
 
+	logrus.Debug("Saving player def stat to db")
+	if err := tx.Table("player_overview_stats").Create(&data.DefStat).Error; err != nil {
+		return err
+	}
+
+	logrus.Debug("Saving player atk stat to db")
+	if err := tx.Table("player_overview_stats").Create(&data.AtkStat).Error; err != nil {
+		return err
+	}
+
 	return nil
 }

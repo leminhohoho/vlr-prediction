@@ -17,6 +17,7 @@ import (
 	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/models"
 	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/scrapers/matches"
 	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/scrapers/matchmaps"
+	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/scrapers/playerstats"
 	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/scrapers/roundstats"
 	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/scrapers/teams"
 	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/scrapers/tournaments"
@@ -63,6 +64,7 @@ func main() {
 	sc.Handle(regexp.MustCompile(`^https:\/\/www\.vlr\.gg\/team\/[0-9]+\/[a-z0-9\/-]*$`), teams.Handler)
 	sc.Handle(regexp.MustCompile(`^https:\/\/www\.vlr\.gg\/event\/[0-9]+\/[a-z0-9\/-]*$`), tournaments.Handler)
 	sc.Handle(regexp.MustCompile(`^roundStat$`), roundstats.Handler)
+	sc.Handle(regexp.MustCompile(`^playerStats$`), playerstats.Handler)
 
 	matchesToBeScraped, err := crawler.CrawlMatches(
 		path.Join(os.Getenv("TMP_DIR"), "vlr_cache.db"),
@@ -146,7 +148,7 @@ func main() {
 			return nil
 		}); err != nil {
 			logrus.Error(err)
-			errs = append(errs, err)
+			errs = append(errs, fmt.Errorf("Error scraping from '%s': %s", fullUrl, err.Error()))
 			continue
 		}
 
