@@ -39,11 +39,11 @@ func wonMethodParser(rawVal string) (any, error) {
 	}
 }
 
-func teamDefParser(t1Id, t2Id, tWonId int) htmlx.Parser {
+func teamDefParser(t1Id, t2Id int, tWonId *int) htmlx.Parser {
 	return func(rawVal string) (any, error) {
 		teamWonClasses := strings.TrimSpace(rawVal)
 		var teamWon, teamLost int
-		if t1Id == tWonId {
+		if t1Id == *tWonId {
 			teamWon = t1Id
 			teamLost = t2Id
 		} else {
@@ -113,6 +113,7 @@ func Handler(sc *piper.Scraper, ctx context.Context, selection *goquery.Selectio
 		map[string]htmlx.Parser{
 			"teamWonParser":   teamWonParser(roundStats.Team1Id, roundStats.Team2Id),
 			"wonMethodParser": wonMethodParser,
+			"teamDefParser":   teamDefParser(roundStats.Team1Id, roundStats.Team2Id, &roundOverviewSchema.TeamWon),
 		},
 	)); err != nil {
 		return err
@@ -125,7 +126,6 @@ func Handler(sc *piper.Scraper, ctx context.Context, selection *goquery.Selectio
 
 	if err := htmlx.ParseFromSelection(&roundEconomySchema, selection.Eq(1), htmlx.SetParsers(
 		map[string]htmlx.Parser{
-			"teamDefParser": teamDefParser(roundStats.Team1Id, roundStats.Team2Id, roundStats.TeamWon),
 			"buyTypeParser": buyTypeParser(roundStats.RoundNo),
 			"balanceParser": balanceParser,
 		},

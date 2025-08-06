@@ -177,11 +177,11 @@ type PlayerHighlightSchema struct {
 type RoundOverviewSchema struct {
 	RoundNo   int       `selector:"div.rnd-num"`
 	TeamWon   int       `selector:"div.rnd-sq.mod-win:nth-child(2)" source:"attr=class" parser:"teamWonParser"`
+	TeamDef   int       `selector:"div.rnd-sq.mod-win"      source:"attr=class" parser:"teamDefParser"`
 	WonMethod WonMethod `selector:"div.rnd-sq.mod-win > img"        source:"attr=src"   parser:"wonMethodParser"`
 }
 
 type RoundEconomySchema struct {
-	TeamDef      int     `selector:"div.rnd-sq.mod-win"      source:"attr=class" parser:"teamDefParser"`
 	Team1BuyType BuyType `selector:"div.rnd-sq:nth-child(3)"                     parser:"buyTypeParser" gorm:"column:team_1_buy_type"`
 	Team2BuyType BuyType `selector:"div.rnd-sq:nth-child(4)"                     parser:"buyTypeParser" gorm:"column:team_2_buy_type"`
 	Team1Bank    int     `selector:"div.bank:nth-child(2)"                       parser:"balanceParser" gorm:"column:team_1_bank"`
