@@ -9,6 +9,7 @@ import (
 	"github.com/jedib0t/go-pretty/table"
 	"github.com/leminhohoho/vlr-prediction/scraping/pkgs/piper"
 	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/models"
+	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
 
@@ -40,7 +41,7 @@ func scrapeRoundsStats(
 			roundOverviewNode := roundsOverviewNodes.Eq(i)
 			roundEconomyNode := roundsEconomyNodes.Eq(i)
 
-			combined := roundOverviewNode.Clone().AddSelection(roundEconomyNode)
+			combined := roundOverviewNode.Clone().AddSelection(roundEconomyNode.Clone())
 
 			roundStat := models.RoundStatSchema{
 				MatchId: matchMapSchema.MatchId,
@@ -67,7 +68,8 @@ func scrapeRoundsStats(
 
 		return nil
 	}); err != nil {
-		return err
+		logrus.Errorf("Error extracting round stats: %s, rounds stats of this map won't be uploaded", err.Error())
+		return nil
 	}
 
 	for i := 0; i < roundsOverviewNodes.Length(); i += 24 {

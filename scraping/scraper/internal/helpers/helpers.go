@@ -51,9 +51,15 @@ func FillPlayerKDA(defStat, atkStat, bothSideStat *int) (*int, *int, error) {
 
 	if defStat == nil {
 		filledDefStat := (*bothSideStat - *atkStat)
+		if filledDefStat < 0 {
+			filledDefStat = 0
+		}
 		return &filledDefStat, atkStat, nil
 	} else {
 		filledAtkStat := (*bothSideStat - *defStat)
+		if filledAtkStat < 0 {
+			filledAtkStat = 0
+		}
 		return defStat, &filledAtkStat, nil
 	}
 }
@@ -83,6 +89,10 @@ func FillPlayerPerRoundStat(
 			)
 		}
 
+		if filledStat < 0 {
+			filledStat = 0
+		}
+
 		return &filledStat, atkStat, nil
 	} else {
 		if teamAtkRounds == 0 {
@@ -91,6 +101,10 @@ func FillPlayerPerRoundStat(
 			filledStat = (float64(*bothSideStat)*totalRounds - float64(teamDefRounds)*float64(*defStat)) / float64(
 				teamAtkRounds,
 			)
+		}
+
+		if filledStat < 0 {
+			filledStat = 0
 		}
 
 		return defStat, &filledStat, nil
@@ -122,6 +136,10 @@ func FillPlayerPerKillStat(
 			)
 		}
 
+		if filledStat < 0 {
+			filledStat = 0
+		}
+
 		return &filledStat, atkStat, nil
 	} else {
 		if playerAtkKills == 0 {
@@ -130,6 +148,10 @@ func FillPlayerPerKillStat(
 			filledStat = (float64(*bothSideStat)*totalKills - float64(playerDefKills)*float64(*defStat)) / float64(
 				playerAtkKills,
 			)
+		}
+
+		if filledStat < 0 {
+			filledStat = 0
 		}
 
 		return defStat, &filledStat, nil
