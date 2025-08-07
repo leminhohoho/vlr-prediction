@@ -2,7 +2,6 @@ package playerduelstats
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/PuerkitoBio/goquery"
@@ -23,7 +22,7 @@ func Handler(sc *piper.Scraper, ctx context.Context, selection *goquery.Selectio
 		return fmt.Errorf("Unable to find player duel stats")
 	}
 
-	_, ok = ctx.Value("tx").(*gorm.DB)
+	tx, ok := ctx.Value("tx").(*gorm.DB)
 	if !ok {
 		return fmt.Errorf("Unable to find gorm transaction")
 	}
@@ -55,12 +54,10 @@ func Handler(sc *piper.Scraper, ctx context.Context, selection *goquery.Selectio
 	duelStats.DuelFirstKills = duelFirstKills
 	duelStats.DuelOpKills = duelOpKills
 
-	jsonDat, err := json.MarshalIndent(*duelStats, "", "	")
-	if err != nil {
+	logrus.Debug("Saving player duel stats to db")
+	if err := tx.Table("players_duel_stats").Create(duelStats).Error; err != nil {
 		return err
 	}
-
-	fmt.Println(string(jsonDat))
 
 	return nil
 }

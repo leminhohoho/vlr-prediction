@@ -140,30 +140,29 @@ type PlayerOverviewStatSchema struct {
 }
 
 type DuelKills struct {
-	Team1PlayerKillsVsTeam2Player int `selector:"div:nth-child(1)" parser:"duelParser"`
-	Team2PlayerKillsVsTeam1Player int `selector:"div:nth-child(2)" parser:"duelParser"`
+	Team1PlayerKillsVsTeam2Player int `selector:"div:nth-child(1)" parser:"duelParser" gorm:"column:team_1_player_kills_vs_team_2_player"`
+	Team2PlayerKillsVsTeam1Player int `selector:"div:nth-child(2)" parser:"duelParser" gorm:"column:team_2_player_kills_vs_team_1_player"`
 }
 
 type DuelFirstKills struct {
-	Team1PlayerFirstKillsVsTeam2Player int `selector:"div:nth-child(1)" parser:"duelParser"`
-	Team2PlayerFirstKillsVsTeam1Player int `selector:"div:nth-child(2)" parser:"duelParser"`
+	Team1PlayerFirstKillsVsTeam2Player int `selector:"div:nth-child(1)" parser:"duelParser" gorm:"column:team_1_player_first_kills_vs_team_2_player"`
+	Team2PlayerFirstKillsVsTeam1Player int `selector:"div:nth-child(2)" parser:"duelParser" gorm:"column:team_2_player_first_kills_vs_team_1_player"`
 }
 
 type DuelOpKills struct {
-	Team1PlayerOpKillsVsTeam2Player int `selector:"div:nth-child(1)" parser:"duelParser"`
-	Team2PlayerOpKillsVsTeam1Player int `selector:"div:nth-child(2)" parser:"duelParser"`
+	Team1PlayerOpKillsVsTeam2Player int `selector:"div:nth-child(1)" parser:"duelParser" gorm:"column:team_1_player_op_kills_vs_team_2_player"`
+	Team2PlayerOpKillsVsTeam1Player int `selector:"div:nth-child(2)" parser:"duelParser" gorm:"column:team_2_player_op_kills_vs_team_1_player"`
 }
 
 type PlayerDuelStatSchema struct {
-	MatchId       int
-	MapId         int
-	Team1PlayerId int
-	Team2PlayerId int
+	MatchId       int `gorm:"column:match_id"`
+	MapId         int `gorm:"column:map_id"`
+	Team1PlayerId int `gorm:"column:team_1_player_id"`
+	Team2PlayerId int `gorm:"column:team_2_player_id"`
 	DuelKills
 	DuelFirstKills
 	DuelOpKills
 }
-
 type PlayerHighlightSchema struct {
 	MatchId         int
 	MapId           int
@@ -177,15 +176,15 @@ type PlayerHighlightSchema struct {
 type RoundOverviewSchema struct {
 	RoundNo   int       `selector:"div.rnd-num"`
 	TeamWon   int       `selector:"div.rnd-sq.mod-win:nth-child(2)" source:"attr=class" parser:"teamWonParser"`
-	TeamDef   int       `selector:"div.rnd-sq.mod-win"      source:"attr=class" parser:"teamDefParser"`
+	TeamDef   int       `selector:"div.rnd-sq.mod-win"              source:"attr=class" parser:"teamDefParser"`
 	WonMethod WonMethod `selector:"div.rnd-sq.mod-win > img"        source:"attr=src"   parser:"wonMethodParser"`
 }
 
 type RoundEconomySchema struct {
-	Team1BuyType BuyType `selector:"div.rnd-sq:nth-child(3)"                     parser:"buyTypeParser" gorm:"column:team_1_buy_type"`
-	Team2BuyType BuyType `selector:"div.rnd-sq:nth-child(4)"                     parser:"buyTypeParser" gorm:"column:team_2_buy_type"`
-	Team1Bank    int     `selector:"div.bank:nth-child(2)"                       parser:"balanceParser" gorm:"column:team_1_bank"`
-	Team2Bank    int     `selector:"div.bank:nth-child(5)"                       parser:"balanceParser" gorm:"column:team_2_bank"`
+	Team1BuyType BuyType `selector:"div.rnd-sq:nth-child(3)" parser:"buyTypeParser" gorm:"column:team_1_buy_type"`
+	Team2BuyType BuyType `selector:"div.rnd-sq:nth-child(4)" parser:"buyTypeParser" gorm:"column:team_2_buy_type"`
+	Team1Bank    int     `selector:"div.bank:nth-child(2)"   parser:"balanceParser" gorm:"column:team_1_bank"`
+	Team2Bank    int     `selector:"div.bank:nth-child(5)"   parser:"balanceParser" gorm:"column:team_2_bank"`
 }
 
 type RoundStatSchema struct {
@@ -212,5 +211,5 @@ type TournamentSchema struct {
 	Name      string `selector:"#wrapper > div.col-container > div > div.wf-card.mod-event.mod-header.mod-full > div.event-header > div.event-desc > div > h1"`
 	Url       string
 	PrizePool int  `selector:"#wrapper > div.col-container > div > div.wf-card.mod-event.mod-header.mod-full > div.event-header > div.event-desc > div > div.event-desc-items > div:nth-child(2) > div.event-desc-item-value" parser:"moneyParser"`
-	Tier1     bool `gorm:"column:tier_1"`
+	Tier1     bool `                                                                                                                                                                                                                               gorm:"column:tier_1"`
 }

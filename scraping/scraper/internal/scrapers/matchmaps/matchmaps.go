@@ -83,7 +83,7 @@ func Handler(sc *piper.Scraper, ctx context.Context, selection *goquery.Selectio
 	}
 
 	mapOverviewNode := selection.Eq(0)
-	// mapPerformanceNode := selection.Eq(1)
+	mapPerformanceNode := selection.Eq(1)
 	mapEconomyNode := selection.Eq(2)
 
 	logrus.Debug("Parsing information from html onto match map schema")
@@ -103,15 +103,20 @@ func Handler(sc *piper.Scraper, ctx context.Context, selection *goquery.Selectio
 		return err
 	}
 
-	logrus.Debug("Scraping rounds stats")
-	if err := scrapeRoundsStats(tx, sc, *matchMapSchema, mapOverviewNode, mapEconomyNode); err != nil {
-		return err
-	}
-
 	logrus.Debug("Scraping players overview stats")
 	t1Hashmap, t2Hashmap, err := scrapePlayersStats(tx, sc, *matchMapSchema, mapOverviewNode)
 	if err != nil {
 		return err
+	}
+
+	logrus.Debug("Scraping rounds stats")
+	if err := scrapeRoundsStats(tx, sc, *matchMapSchema, mapOverviewNode, mapEconomyNode); err != nil {
+		logrus.Errorf("Error extracting round stats: %s, rounds stats of this map won't be uploaded", err.Error())
+	}
+
+	logrus.Debug("Scraping players duel stats")
+	if err := scrapePlayerDuelStats(tx, sc, *matchMapSchema, mapPerformanceNode, t1Hashmap, t2Hashmap); err != nil {
+		logrus.Errorf("Error extracting players duel stats: %s, rounds stats of this map won't be uploaded", err.Error())
 	}
 
 	fmt.Println(t1Hashmap)
