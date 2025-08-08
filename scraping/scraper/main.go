@@ -18,6 +18,7 @@ import (
 	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/scrapers/matches"
 	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/scrapers/matchmaps"
 	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/scrapers/playerduelstats"
+	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/scrapers/playerhighlights"
 	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/scrapers/playerstats"
 	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/scrapers/roundstats"
 	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/scrapers/teams"
@@ -67,6 +68,7 @@ func main() {
 	sc.Handle(regexp.MustCompile(`^roundStat$`), roundstats.Handler)
 	sc.Handle(regexp.MustCompile(`^playerStats$`), playerstats.Handler)
 	sc.Handle(regexp.MustCompile(`^duelStats$`), playerduelstats.Handler)
+	sc.Handle(regexp.MustCompile(`^highlights$`), playerhighlights.Handler)
 
 	matchesToBeScraped, err := crawler.CrawlMatches(
 		path.Join(os.Getenv("TMP_DIR"), "vlr_cache.db"),
@@ -75,8 +77,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-
-	var errs []error
 
 	for i, matchToBeScraped := range matchesToBeScraped {
 		urlInfo, err := urlinfo.ExtractUrlInfo(matchToBeScraped.Url)
@@ -150,7 +150,6 @@ func main() {
 			return nil
 		}); err != nil {
 			logrus.Error(err)
-			errs = append(errs, fmt.Errorf("Error scraping from '%s': %s", fullUrl, err.Error()))
 			continue
 		}
 
@@ -160,7 +159,7 @@ func main() {
 	}
 
 	fmt.Println("=========================== ERROR ===========================")
-	for _, err := range errs {
-		logrus.Error(err)
+	for pattern, err := range sc.Errors() {
+		logrus.Error(fmt.Errorf("Error from '%s': %s", pattern, err.Error()))
 	}
 }

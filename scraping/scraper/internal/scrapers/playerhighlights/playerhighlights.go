@@ -2,7 +2,6 @@ package playerhighlights
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -13,8 +12,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
-
-type HighlightType string
 
 const (
 	PlayerNameSelector = "div:not(:first-child)"
@@ -37,97 +34,13 @@ type PlayerHighlightScraper struct {
 	Tx                  *gorm.DB
 }
 
-func NewScraper(
-	tx *gorm.DB,
-	playerHighlightNode *goquery.Selection,
-	matchId, mapId, teamId, playerId int,
-	highlightType models.HighlightType,
-	otherTeamHashMap map[string]int,
-) *PlayerHighlightScraper {
-	return &PlayerHighlightScraper{
-		Data: Data{
-			MatchId:          matchId,
-			MapId:            mapId,
-			TeamId:           teamId,
-			PlayerId:         playerId,
-			HighlightType:    highlightType,
-			OtherTeamHashMap: otherTeamHashMap,
-		},
-		PlayerHighlightNode: playerHighlightNode,
-		Tx:                  tx,
-	}
-}
-
-func (p *PlayerHighlightScraper) getPlayersId() error {
-	errChan := make(chan error)
-
-	go func() {
-		p.PlayerHighlightNode.Find(PlayerNameSelector).Each(func(i int, playerNameNode *goquery.Selection) {
-			playerAgainstName := strings.TrimSpace(playerNameNode.Children().Remove().End().Text())
-			if playerAgainstName == "" {
-				errChan <- fmt.Errorf("Player number %d int the highlight log is empty", i)
-				return
-			}
-
-			playerAgainstId, ok := p.Data.OtherTeamHashMap[playerAgainstName]
-			if !ok {
-				errChan <- fmt.Errorf("Player %s is not in the other team", playerAgainstName)
-				return
-			}
-
-			p.Data.HighlightLog = append(p.Data.HighlightLog, models.PlayerHighlightSchema{
-				MatchId:         p.Data.MatchId,
-				MapId:           p.Data.MapId,
-				RoundNo:         p.Data.RoundNo,
-				TeamId:          p.Data.TeamId,
-				PlayerId:        p.Data.PlayerId,
-				HighlightType:   p.Data.HighlightType,
-				PlayerAgainstId: playerAgainstId,
-			})
-
-		})
-
-		errChan <- nil
-	}()
-
-	select {
-	case err := <-errChan:
-		return err
-	}
-}
-
-func (p *PlayerHighlightScraper) PrettyPrint() error {
-	jsonStr, err := json.MarshalIndent(p.Data, "", "	")
-	if err != nil {
-		return err
-	}
-
-	fmt.Println(string(jsonStr))
-
-	return nil
-}
-
-func (p *PlayerHighlightScraper) Scrape() error {
-	logrus.Debug("Getting player highlight round no")
-	if err := htmlx.ParseFromSelection(&p.Data, p.PlayerHighlightNode, htmlx.SetNoPassThroughStruct(true)); err != nil {
-		return err
-	}
-
-	logrus.Debug("Getting players against ids")
-	if err := p.getPlayersId(); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func Handler(sc *piper.Scraper, ctx context.Context, selection *goquery.Selection) error {
 	data, ok := ctx.Value("data").(*Data)
 	if !ok {
 		return fmt.Errorf("Unable to find data for player highlight")
 	}
 
-	_, ok = ctx.Value("tx").(*gorm.DB)
+	tx, ok := ctx.Value("tx").(*gorm.DB)
 	if !ok {
 		return fmt.Errorf("Unable to find gorm transaction")
 	}
@@ -137,47 +50,40 @@ func Handler(sc *piper.Scraper, ctx context.Context, selection *goquery.Selectio
 		return err
 	}
 
-	errChan := make(chan error)
-
 	logrus.Debug("Getting players against ids")
-	go func() {
-		selection.Find(PlayerNameSelector).Each(func(i int, playerNameNode *goquery.Selection) {
-			playerAgainstName := strings.TrimSpace(playerNameNode.Children().Remove().End().Text())
-			if playerAgainstName == "" {
-				errChan <- fmt.Errorf("Player number %d int the highlight log is empty", i)
-				return
-			}
+	playersNames := selection.Find(PlayerNameSelector)
 
-			playerAgainstId, ok := data.OtherTeamHashMap[playerAgainstName]
-			if !ok {
-				errChan <- fmt.Errorf("Player %s is not in the other team", playerAgainstName)
-				return
-			}
+	for i := range playersNames.Length() {
+		playerNameNode := playersNames.Eq(i)
+		playerAgainstName := strings.TrimSpace(playerNameNode.Children().Remove().End().Text())
+		if playerAgainstName == "" {
+			return fmt.Errorf("Player number %d int the highlight log is empty", i)
 
-			data.HighlightLog = append(data.HighlightLog, models.PlayerHighlightSchema{
-				MatchId:         data.MatchId,
-				MapId:           data.MapId,
-				RoundNo:         data.RoundNo,
-				TeamId:          data.TeamId,
-				PlayerId:        data.PlayerId,
-				HighlightType:   data.HighlightType,
-				PlayerAgainstId: playerAgainstId,
-			})
-
-		})
-
-		jsonDat, err := json.MarshalIndent(*data, "", "	")
-		if err != nil {
-			errChan <- nil
 		}
 
-		fmt.Println(string(jsonDat))
+		playerAgainstId, ok := data.OtherTeamHashMap[playerAgainstName]
+		if !ok {
+			logrus.Warnf("Player %s is not in the other team, set id to 0", playerAgainstName)
+			playerAgainstId = 0
+		}
 
-		errChan <- nil
-	}()
-
-	select {
-	case err := <-errChan:
-		return err
+		data.HighlightLog = append(data.HighlightLog, models.PlayerHighlightSchema{
+			MatchId:         data.MatchId,
+			MapId:           data.MapId,
+			RoundNo:         data.RoundNo,
+			TeamId:          data.TeamId,
+			PlayerId:        data.PlayerId,
+			HighlightType:   data.HighlightType,
+			PlayerAgainstId: playerAgainstId,
+		})
 	}
+
+	logrus.Debug("Saving highlights to db")
+	for _, highlight := range data.HighlightLog {
+		if err := tx.Table("player_highlights").Create(&highlight).Error; err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

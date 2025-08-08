@@ -116,7 +116,12 @@ func Handler(sc *piper.Scraper, ctx context.Context, selection *goquery.Selectio
 
 	logrus.Debug("Scraping players duel stats")
 	if err := scrapePlayerDuelStats(tx, sc, *matchMapSchema, mapPerformanceNode, t1Hashmap, t2Hashmap); err != nil {
-		logrus.Errorf("Error extracting players duel stats: %s, rounds stats of this map won't be uploaded", err.Error())
+		logrus.Errorf("Error extracting players duel stats: %s, player duel stats of this map won't be uploaded", err.Error())
+	}
+
+	logrus.Debug("Scraping players highlights")
+	if err := scrapePlayersHighlights(tx, sc, *matchMapSchema, mapPerformanceNode, t1Hashmap, t2Hashmap); err != nil {
+		logrus.Errorf("Error extracting players highlights: %s, players highlights of this map won't be uploaded", err.Error())
 	}
 
 	fmt.Println(t1Hashmap)
