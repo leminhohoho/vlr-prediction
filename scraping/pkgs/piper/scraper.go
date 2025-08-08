@@ -22,6 +22,7 @@ type Scraper struct {
 	handlers map[*regexp.Regexp]Handler
 	backend  Backend
 	cache    Cache
+	errors   map[string]error
 }
 
 // NewScraper create a new scraper with the given backend and cache.
@@ -30,6 +31,7 @@ func NewScraper(backend Backend, cache Cache) *Scraper {
 		backend:  backend,
 		cache:    cache,
 		handlers: map[*regexp.Regexp]Handler{},
+		errors:   map[string]error{},
 	}
 }
 
@@ -47,7 +49,19 @@ func (sc *Scraper) Handle(regex *regexp.Regexp, h Handler) {
 func (sc *Scraper) Pipe(pattern string, ctx context.Context, selection *goquery.Selection) error {
 	for regex, handler := range sc.handlers {
 		if regex.MatchString(pattern) {
-			return handler(sc, ctx, selection)
+			if err := handler(sc, ctx, selection); err != nil {
+				for _, scraperErr := range sc.errors {
+					if scraperErr == err {
+						return err
+					}
+				}
+
+				sc.errors[pattern] = err
+
+				return err
+			}
+
+			return nil
 		}
 	}
 
@@ -97,4 +111,9 @@ func (sc *Scraper) Delete(url string, ctx context.Context, body io.Reader) error
 // Cache return the cache implementation used by the scraper
 func (sc *Scraper) Cache() Cache {
 	return sc.cache
+}
+
+// Errors return all errors returned from the handlers
+func (sc *Scraper) Errors() map[string]error {
+	return sc.errors
 }
