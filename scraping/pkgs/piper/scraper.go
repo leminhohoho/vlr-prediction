@@ -50,14 +50,7 @@ func (sc *Scraper) Pipe(pattern string, ctx context.Context, selection *goquery.
 	for regex, handler := range sc.handlers {
 		if regex.MatchString(pattern) {
 			if err := handler(sc, ctx, selection); err != nil {
-				for _, scraperErr := range sc.errors {
-					if scraperErr.Error() == err.Error() {
-						return err
-					}
-				}
-
 				sc.errors[pattern] = err
-
 				return err
 			}
 

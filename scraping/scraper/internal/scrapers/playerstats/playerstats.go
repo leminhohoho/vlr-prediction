@@ -147,5 +147,27 @@ func Handler(sc *piper.Scraper, ctx context.Context, selection *goquery.Selectio
 		return err
 	}
 
+	logrus.Debug("Check if player already exists")
+	var exists bool
+	if err := tx.Table("players").Select("count(*) > 0").Where("id = ?", data.DefStat.PlayerId).Find(&exists).Error; err != nil {
+		return err
+	}
+
+	if !exists {
+		logrus.Debug("Player doesn't exists, start scraping player")
+		p := models.PlayerSchema{
+			Id:  data.DefStat.PlayerId,
+			Url: fmt.Sprintf("https://www.vlr.gg/player/%d/", data.DefStat.PlayerId),
+		}
+
+		ctx := context.WithValue(context.WithValue(context.Background(), "player", &p), "tx", tx)
+
+		if err := sc.Get(p.Url, ctx, nil); err != nil {
+			return err
+		}
+	} else {
+		logrus.Debug("Player exists, continue")
+	}
+
 	return nil
 }

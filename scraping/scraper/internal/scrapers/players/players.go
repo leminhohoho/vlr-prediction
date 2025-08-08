@@ -110,5 +110,10 @@ func Handler(sc *piper.Scraper, ctx context.Context, selection *goquery.Selectio
 
 	fmt.Println(string(jsonDat))
 
+	logrus.Debug("Saving player to db")
+	if err := tx.Table("players").Create(p).Error; err != nil {
+		return err
+	}
+
 	return nil
 }

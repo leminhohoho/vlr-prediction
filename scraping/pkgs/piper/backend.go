@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/PuerkitoBio/goquery"
 )
@@ -72,6 +73,8 @@ func (b *PiperBackend) Do(method, url string, body io.Reader) (*goquery.Selectio
 	if err != nil {
 		return nil, err
 	}
+
+	time.Sleep(time.Microsecond * 200)
 
 	return doc.Selection, nil
 }

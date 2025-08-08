@@ -16,6 +16,22 @@ func ToSnakeCase(str string) string {
 	return strings.Join(fragments, "_")
 }
 
+func CountNumLength(num int) int {
+	if num == 0 {
+		return 1
+	}
+
+	copy := num
+
+	var length int
+	for copy > 0 {
+		copy /= 10
+		length++
+	}
+
+	return length
+}
+
 func TimeToSeconds(timeStr string) (int, error) {
 	colonCount := strings.Count(timeStr, ":")
 

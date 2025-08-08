@@ -19,10 +19,12 @@ import (
 	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/scrapers/matchmaps"
 	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/scrapers/playerduelstats"
 	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/scrapers/playerhighlights"
+	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/scrapers/players"
 	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/scrapers/playerstats"
 	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/scrapers/roundstats"
 	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/scrapers/teams"
 	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/scrapers/tournaments"
+	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/utils/progressbar"
 	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/utils/urlinfo"
 	"github.com/sirupsen/logrus"
 	"gorm.io/driver/sqlite"
@@ -34,7 +36,7 @@ func main() {
 		panic(err)
 	}
 
-	logrus.SetLevel(logrus.TraceLevel)
+	logrus.SetLevel(logrus.InfoLevel)
 
 	vlrDb, err := gorm.Open(sqlite.Open(os.Getenv("VLR_DB_PATH")), &gorm.Config{})
 	if err != nil {
@@ -69,6 +71,13 @@ func main() {
 	sc.Handle(regexp.MustCompile(`^playerStats$`), playerstats.Handler)
 	sc.Handle(regexp.MustCompile(`^duelStats$`), playerduelstats.Handler)
 	sc.Handle(regexp.MustCompile(`^highlights$`), playerhighlights.Handler)
+	sc.Handle(regexp.MustCompile(`^https:\/\/www\.vlr\.gg\/player\/[0-9]+\/[a-z0-9-]*$`), players.Handler)
+
+	pb := progressbar.NewPBar()
+	defer pb.CleanUp()
+
+	pb.SignalHandler()
+	pb.SetHeaderText("Matches scraped (0 fails)")
 
 	matchesToBeScraped, err := crawler.CrawlMatches(
 		path.Join(os.Getenv("TMP_DIR"), "vlr_cache.db"),
@@ -77,6 +86,10 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	pb.SetTotalCount(len(matchesToBeScraped))
+	pb.RenderPBar(0)
+	var failedMatch int
 
 	for i, matchToBeScraped := range matchesToBeScraped {
 		urlInfo, err := urlinfo.ExtractUrlInfo(matchToBeScraped.Url)
@@ -149,6 +162,8 @@ func main() {
 
 			return nil
 		}); err != nil {
+			failedMatch++
+			pb.SetHeaderText(fmt.Sprintf("Matches scraped (%d fails)", failedMatch))
 			logrus.Error(err)
 			continue
 		}
@@ -156,6 +171,8 @@ func main() {
 		if _, err := cacheDb.Exec("DELETE FROM matches_to_be_scraped WHERE url = ?", matchToBeScraped.Url); err != nil {
 			logrus.Errorf("Error deleting match from cache: '%s', skip to next match", err.Error())
 		}
+
+		pb.RenderPBar(i + 1)
 	}
 
 	fmt.Println("=========================== ERROR ===========================")

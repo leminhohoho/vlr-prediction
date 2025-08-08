@@ -69,15 +69,15 @@ func scrapePlayersHighlights(
 			doneChan := make(chan bool)
 
 			go func() {
-				errChan <- scrapeHighlight(tx, sc, matchMapSchema, p2kNode, models.P2k, teamId, playerId, otherTeamHashmap)
-				errChan <- scrapeHighlight(tx, sc, matchMapSchema, p3kNode, models.P3k, teamId, playerId, otherTeamHashmap)
-				errChan <- scrapeHighlight(tx, sc, matchMapSchema, p4kNode, models.P4k, teamId, playerId, otherTeamHashmap)
-				errChan <- scrapeHighlight(tx, sc, matchMapSchema, p5kNode, models.P5k, teamId, playerId, otherTeamHashmap)
-				errChan <- scrapeHighlight(tx, sc, matchMapSchema, p1v1Node, models.P1v1, teamId, playerId, otherTeamHashmap)
-				errChan <- scrapeHighlight(tx, sc, matchMapSchema, p1v2Node, models.P1v2, teamId, playerId, otherTeamHashmap)
-				errChan <- scrapeHighlight(tx, sc, matchMapSchema, p1v3Node, models.P1v3, teamId, playerId, otherTeamHashmap)
-				errChan <- scrapeHighlight(tx, sc, matchMapSchema, p1v4Node, models.P1v4, teamId, playerId, otherTeamHashmap)
-				errChan <- scrapeHighlight(tx, sc, matchMapSchema, p1v5Node, models.P1v5, teamId, playerId, otherTeamHashmap)
+				errChan <- scrapeHighlight(ptx, sc, matchMapSchema, p2kNode, models.P2k, teamId, playerId, otherTeamHashmap)
+				errChan <- scrapeHighlight(ptx, sc, matchMapSchema, p3kNode, models.P3k, teamId, playerId, otherTeamHashmap)
+				errChan <- scrapeHighlight(ptx, sc, matchMapSchema, p4kNode, models.P4k, teamId, playerId, otherTeamHashmap)
+				errChan <- scrapeHighlight(ptx, sc, matchMapSchema, p5kNode, models.P5k, teamId, playerId, otherTeamHashmap)
+				errChan <- scrapeHighlight(ptx, sc, matchMapSchema, p1v1Node, models.P1v1, teamId, playerId, otherTeamHashmap)
+				errChan <- scrapeHighlight(ptx, sc, matchMapSchema, p1v2Node, models.P1v2, teamId, playerId, otherTeamHashmap)
+				errChan <- scrapeHighlight(ptx, sc, matchMapSchema, p1v3Node, models.P1v3, teamId, playerId, otherTeamHashmap)
+				errChan <- scrapeHighlight(ptx, sc, matchMapSchema, p1v4Node, models.P1v4, teamId, playerId, otherTeamHashmap)
+				errChan <- scrapeHighlight(ptx, sc, matchMapSchema, p1v5Node, models.P1v5, teamId, playerId, otherTeamHashmap)
 
 				doneChan <- true
 			}()
