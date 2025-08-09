@@ -61,7 +61,8 @@ func countryIdParser(tx *gorm.DB) htmlx.Parser {
 
 		countryInfo, err := geographyinfo.GetInfoFromCountryName(countryName)
 		if err != nil {
-			return -1, err
+			logrus.Error(err)
+			return nil, nil
 		}
 
 		countryOfficialName := countryInfo.Country
@@ -70,12 +71,14 @@ func countryIdParser(tx *gorm.DB) htmlx.Parser {
 		countryId, err := getCountryId(tx, countryOfficialName)
 		if err != nil {
 			if !errors.Is(err, gorm.ErrRecordNotFound) {
-				return nil, err
+				logrus.Error(err)
+				return nil, nil
 			}
 
 			countryId, err := addCountryInfo(tx, countryOfficialName, regionOfficialName)
 			if err != nil {
-				return nil, err
+				logrus.Error(err)
+				return nil, nil
 			}
 
 			return &countryId, nil

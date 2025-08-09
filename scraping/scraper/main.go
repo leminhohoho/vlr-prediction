@@ -36,7 +36,7 @@ func main() {
 		panic(err)
 	}
 
-	logrus.SetLevel(logrus.InfoLevel)
+	logrus.SetLevel(logrus.TraceLevel)
 
 	vlrDb, err := gorm.Open(sqlite.Open(os.Getenv("VLR_DB_PATH")), &gorm.Config{})
 	if err != nil {
@@ -106,6 +106,9 @@ func main() {
 			logrus.Fatal(err)
 		} else if exists {
 			logrus.Debug("Match exists, continue")
+			if _, err := cacheDb.Exec("DELETE FROM matches_to_be_scraped WHERE url = ?", matchToBeScraped.Url); err != nil {
+				logrus.Errorf("Error deleting match from cache: '%s', skip to next match", err.Error())
+			}
 			continue
 		}
 
@@ -164,6 +167,7 @@ func main() {
 		}); err != nil {
 			failedMatch++
 			pb.SetHeaderText(fmt.Sprintf("Matches scraped (%d fails)", failedMatch))
+			pb.RenderPBar(i + 1)
 			logrus.Error(err)
 			continue
 		}

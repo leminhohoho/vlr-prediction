@@ -65,6 +65,10 @@ func FillPlayerKDA(defStat, atkStat, bothSideStat *int) (*int, *int, error) {
 		return nil, nil, fmt.Errorf("Can't fill in the missing stat without both side stat")
 	}
 
+	if defStat == nil && atkStat == nil {
+		return nil, nil, fmt.Errorf("Missing both def stat and atk stat")
+	}
+
 	if defStat == nil {
 		filledDefStat := (*bothSideStat - *atkStat)
 		if filledDefStat < 0 {
@@ -90,6 +94,10 @@ func FillPlayerPerRoundStat(
 
 	if bothSideStat == nil {
 		return nil, nil, fmt.Errorf("Can't fill in the missing stat without both side stat")
+	}
+
+	if defStat == nil && atkStat == nil {
+		return nil, nil, fmt.Errorf("Missing both def stat and atk stat")
 	}
 
 	totalRounds := float64(teamDefRounds + teamAtkRounds)
@@ -137,6 +145,10 @@ func FillPlayerPerKillStat(
 
 	if bothSideStat == nil {
 		return nil, nil, fmt.Errorf("Can't fill in the missing stat without both side stat")
+	}
+
+	if defStat == nil && atkStat == nil {
+		return nil, nil, fmt.Errorf("Missing both def stat and atk stat")
 	}
 
 	totalKills := float64(playerDefKills + playerAtkKills)
