@@ -9,6 +9,7 @@ func TestToSnakeCase(t *testing.T) {
 		{"Main event: Group stage", "main_event:_group_stage"},
 		{"Playoff: Semifinal", "playoff:_semifinal"},
 		{"Playoff: Grand final", "playoff:_grand_final"},
+		{"Playoffs: Upper Round 1", "playoffs:_upper_round_1"},
 	}
 
 	for _, test := range tests {

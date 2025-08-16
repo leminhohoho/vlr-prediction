@@ -11,6 +11,7 @@ import (
 	"github.com/leminhohoho/vlr-prediction/scraping/pkgs/piper"
 	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/helpers"
 	"github.com/leminhohoho/vlr-prediction/scraping/scraper/internal/models"
+	"github.com/sirupsen/logrus"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
@@ -21,6 +22,19 @@ const (
 
 func TestMatchScraper(t *testing.T) {
 	testMatches := []models.MatchSchema{
+		{
+			Id:           530355,
+			Url:          "https://www.vlr.gg/530355/rex-regum-qeon-vs-t1-vct-2025-pacific-stage-2-ur1",
+			Date:         time.Time{},
+			TournamentId: 2500,
+			Stage:        models.Playoff,
+			Team1Id:      878,
+			Team2Id:      14,
+			Team1Score:   1,
+			Team2Score:   2,
+			Team1Rating:  1784,
+			Team2Rating:  1823,
+		},
 		{
 			Id:           506931,
 			Url:          "https://www.vlr.gg/506931/bilibili-gaming-vs-tyloo-vct-2025-china-stage-2-w1",
@@ -61,6 +75,8 @@ func TestMatchScraper(t *testing.T) {
 			Team2Rating:  1974,
 		},
 	}
+
+	logrus.SetLevel(logrus.TraceLevel)
 
 	db, err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{})
 	if err != nil {
@@ -115,4 +131,6 @@ func TestMatchScraper(t *testing.T) {
 			t.Error(err)
 		}
 	}
+
+	tx.Rollback()
 }

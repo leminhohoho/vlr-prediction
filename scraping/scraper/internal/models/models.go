@@ -77,14 +77,14 @@ type MatchSchema struct {
 	Id           int
 	Url          string
 	Date         time.Time `gorm:"type:datetime"`
-	TournamentId int       `                            selector:"#wrapper > div.col-container > div.col.mod-3 > div.wf-card.match-header > div.match-header-super > div:nth-child(1) > a"                                                                             source:"attr=href" parser:"idParser"`
-	Stage        Stage     `                            selector:"#wrapper > div.col-container > div.col.mod-3 > div.wf-card.mod-color.mod-bg-after-striped_purple.match-header > div.match-header-super > div:nth-child(1) > a > div > div.match-header-event-series"                    parser:"stageParser"`
-	Team1Id      int       `gorm:"column:team_1_id"     selector:"#wrapper > div.col-container > div.col.mod-3 > div.wf-card.match-header > div.match-header-vs > a.match-header-link.wf-link-hover.mod-1"                                                             source:"attr=href" parser:"idParser"`
-	Team2Id      int       `gorm:"column:team_2_id"     selector:"#wrapper > div.col-container > div.col.mod-3 > div.wf-card.match-header > div.match-header-vs > a.match-header-link.wf-link-hover.mod-2"                                                             source:"attr=href" parser:"idParser"`
+	TournamentId int       `                            selector:"#wrapper > div.col-container > div.col.mod-3 > div.wf-card.match-header > div.match-header-super > div:nth-child(1) > a"                                                        source:"attr=href" parser:"idParser"`
+	Stage        Stage     `                            selector:"#wrapper > div.col-container > div.col.mod-3 > div.wf-card.match-header > div.match-header-super > div:nth-child(1) > a > div > div.match-header-event-series"                                    parser:"stageParser"`
+	Team1Id      int       `gorm:"column:team_1_id"     selector:"#wrapper > div.col-container > div.col.mod-3 > div.wf-card.match-header > div.match-header-vs > a.match-header-link.wf-link-hover.mod-1"                                        source:"attr=href" parser:"idParser"`
+	Team2Id      int       `gorm:"column:team_2_id"     selector:"#wrapper > div.col-container > div.col.mod-3 > div.wf-card.match-header > div.match-header-vs > a.match-header-link.wf-link-hover.mod-2"                                        source:"attr=href" parser:"idParser"`
 	Team1Score   int       `gorm:"column:team_1_score"  selector:"#wrapper > div.col-container > div.col.mod-3 > div.wf-card.match-header > div.match-header-vs > div > div.match-header-vs-score > div:nth-child(1) > span:nth-child(1)"`
 	Team2Score   int       `gorm:"column:team_2_score"  selector:"#wrapper > div.col-container > div.col.mod-3 > div.wf-card.match-header > div.match-header-vs > div > div.match-header-vs-score > div:nth-child(1) > span:nth-child(3)"`
-	Team1Rating  int       `gorm:"column:team_1_rating" selector:"#wrapper > div.col-container > div.col.mod-3 > div.wf-card.match-header > div.match-header-vs > a.match-header-link.wf-link-hover.mod-1 > div > div.match-header-link-name-elo"                                         parser:"ratingParser"`
-	Team2Rating  int       `gorm:"column:team_2_rating" selector:"#wrapper > div.col-container > div.col.mod-3 > div.wf-card.match-header > div.match-header-vs > a.match-header-link.wf-link-hover.mod-2 > div > div.match-header-link-name-elo"                                         parser:"ratingParser"`
+	Team1Rating  int       `gorm:"column:team_1_rating" selector:"#wrapper > div.col-container > div.col.mod-3 > div.wf-card.match-header > div.match-header-vs > a.match-header-link.wf-link-hover.mod-1 > div > div.match-header-link-name-elo"                    parser:"ratingParser"`
+	Team2Rating  int       `gorm:"column:team_2_rating" selector:"#wrapper > div.col-container > div.col.mod-3 > div.wf-card.match-header > div.match-header-vs > a.match-header-link.wf-link-hover.mod-2 > div > div.match-header-link-name-elo"                    parser:"ratingParser"`
 }
 
 type BanPickLogSchema struct {
