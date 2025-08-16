@@ -2,3 +2,8 @@ tmp
 *.db
 main
 .env
+.csv
+*-shm
+*-wal
+.ipynb_checkpoints
+__pycache__
