@@ -2,7 +2,7 @@ tmp
 *.db
 main
 .env
-.csv
+*.csv
 *-shm
 *-wal
 .ipynb_checkpoints
