@@ -11,6 +11,17 @@ from data_loader import (
 from utils import subtract_date, divide
 
 
+def count_maps_win(maps, team_id, date):
+    team_wins = 0
+
+    for map in maps.itertuples(index=False):
+        date_diff = 1 - (subtract_date(date, map.date) / 1000)
+        if (map.team_1_id == team_id and map.team_1_score > map.team_2_score) or (map.team_2_id == team_id and map.team_1_score < map.team_2_score):
+            team_wins += 1 * date_diff
+
+    return team_wins
+
+
 def wr_diff(conn, t1_id, t2_id, date, min_maps=16):
     t1_maps = load_team_played_maps_recently(conn, t1_id, date)
     t2_maps = load_team_played_maps_recently(conn, t2_id, date)
@@ -18,20 +29,8 @@ def wr_diff(conn, t1_id, t2_id, date, min_maps=16):
     if len(t1_maps) < min_maps or len(t2_maps) < min_maps:
         return None
 
-    def append_wins(maps, team_id):
-        team_wins = 0
-
-        for map in maps.itertuples(index=False):
-            date_diff = 1 - (subtract_date(date, map.date) / 1000)
-            if (map.team_1_id == team_id and map.team_1_score > map.team_2_score) or (
-                map.team_2_id == team_id and map.team_1_score < map.team_2_score
-            ):
-                team_wins += 1 * date_diff
-
-        return team_wins
-
-    t1_wins = append_wins(t1_maps, t1_id)
-    t2_wins = append_wins(t2_maps, t2_id)
+    t1_wins = count_maps_win(t1_maps, t1_id, date)
+    t2_wins = count_maps_win(t2_maps, t2_id, date)
 
     t1_wr = t1_wins / len(t1_maps)
     t2_wr = t2_wins / len(t2_maps)
@@ -230,7 +229,7 @@ def highlights_diff(conn, t1_id, t2_id, date, min_maps=16):
         return (None, None, None, None, None, None, None, None, None, None, None, None, None)
 
 
-def avg_rounds_after_win_n_loss(conn, t1_id, t2_id, date, min_maps=16):
+def avg_rounds_after_win_n_loss_diff(conn, t1_id, t2_id, date, min_maps=16):
     t1_rounds = load_team_played_rounds_recently(conn, t1_id, date)
     t2_rounds = load_team_played_rounds_recently(conn, t2_id, date)
     t1_maps = load_team_played_maps_recently(conn, t1_id, date)
@@ -275,4 +274,47 @@ def avg_rounds_after_win_n_loss(conn, t1_id, t2_id, date, min_maps=16):
     return (
         (t1_avg_round_win_after_win**2 - t2_avg_round_win_after_win**2) / 2,
         (t1_avg_round_loss_after_loss**2 - t2_avg_round_loss_after_loss**2) / 2,
+    )
+
+
+def wr_based_on_lead_diff(conn, t1_id, t2_id, date, min_maps=16):
+    t1_maps = load_team_played_maps_recently(conn, t1_id, date)
+    t2_maps = load_team_played_maps_recently(conn, t2_id, date)
+
+    if len(t1_maps) < min_maps or len(t2_maps) < min_maps:
+        return (None, None)
+
+    t1_maps_with_lead = t1_maps[
+        ((t1_maps["team_def_first"] == t1_id) & (t1_maps["team_1_id"] == t1_id) & (t1_maps["team_1_def_score"] > 6))
+        | ((t1_maps["team_def_first"] == t1_id) & (t1_maps["team_2_id"] == t1_id) & (t1_maps["team_2_def_score"] > 6))
+        | ((t1_maps["team_def_first"] != t1_id) & (t1_maps["team_1_id"] == t1_id) & (t1_maps["team_1_atk_score"] > 6))
+        | ((t1_maps["team_def_first"] != t1_id) & (t1_maps["team_2_id"] == t1_id) & (t1_maps["team_2_atk_score"] > 6))
+    ]
+    t1_maps_without_lead = t1_maps[
+        ((t1_maps["team_def_first"] == t1_id) & (t1_maps["team_1_id"] == t1_id) & (t1_maps["team_1_def_score"] < 6))
+        | ((t1_maps["team_def_first"] == t1_id) & (t1_maps["team_2_id"] == t1_id) & (t1_maps["team_2_def_score"] < 6))
+        | ((t1_maps["team_def_first"] != t1_id) & (t1_maps["team_1_id"] == t1_id) & (t1_maps["team_1_atk_score"] < 6))
+        | ((t1_maps["team_def_first"] != t1_id) & (t1_maps["team_2_id"] == t1_id) & (t1_maps["team_2_atk_score"] < 6))
+    ]
+    t2_maps_with_lead = t2_maps[
+        ((t2_maps["team_def_first"] == t2_id) & (t2_maps["team_1_id"] == t2_id) & (t2_maps["team_1_def_score"] > 6))
+        | ((t2_maps["team_def_first"] == t2_id) & (t2_maps["team_2_id"] == t2_id) & (t2_maps["team_2_def_score"] > 6))
+        | ((t2_maps["team_def_first"] != t2_id) & (t2_maps["team_1_id"] == t2_id) & (t2_maps["team_1_atk_score"] > 6))
+        | ((t2_maps["team_def_first"] != t2_id) & (t2_maps["team_2_id"] == t2_id) & (t2_maps["team_2_atk_score"] > 6))
+    ]
+    t2_maps_without_lead = t2_maps[
+        ((t2_maps["team_def_first"] == t2_id) & (t2_maps["team_1_id"] == t2_id) & (t2_maps["team_1_def_score"] < 6))
+        | ((t2_maps["team_def_first"] == t2_id) & (t2_maps["team_2_id"] == t2_id) & (t2_maps["team_2_def_score"] < 6))
+        | ((t2_maps["team_def_first"] != t2_id) & (t2_maps["team_1_id"] == t2_id) & (t2_maps["team_1_atk_score"] < 6))
+        | ((t2_maps["team_def_first"] != t2_id) & (t2_maps["team_2_id"] == t2_id) & (t2_maps["team_2_atk_score"] < 6))
+    ]
+
+    t1_wr_with_lead = count_maps_win(t1_maps_with_lead, t1_id, date) / len(t1_maps_with_lead)
+    t1_wr_without_lead = count_maps_win(t1_maps_without_lead, t1_id, date) / len(t1_maps_without_lead)
+    t2_wr_with_lead = count_maps_win(t2_maps_with_lead, t2_id, date) / len(t2_maps_with_lead)
+    t2_wr_without_lead = count_maps_win(t2_maps_without_lead, t2_id, date) / len(t2_maps_without_lead)
+
+    return (
+        (t1_wr_with_lead**2 - t2_wr_with_lead**2) / 2,
+        (t1_wr_without_lead**2 - t2_wr_without_lead**2) / 2,
     )

@@ -5,11 +5,12 @@ import pandas as pd
 from data_loader import load_matches
 from features import (
     avg_opps_rating_diff,
-    avg_rounds_after_win_n_loss,
+    avg_rounds_after_win_n_loss_diff,
     highlights_diff,
     direct_hth,
     fk_fd_per_round_diff,
     indirect_hth,
+    wr_based_on_lead_diff,
     wr_diff,
     maps_strength_diff,
 )
@@ -76,7 +77,12 @@ df = add_n_filter(
 df = add_n_filter(
     df,
     ["avg_rounds_win_after_round_win", "avg_rounds_loss_after_round_loss"],
-    lambda row: avg_rounds_after_win_n_loss(conn, row["team_1_id"], row["team_2_id"], row["date"]),
+    lambda row: avg_rounds_after_win_n_loss_diff(conn, row["team_1_id"], row["team_2_id"], row["date"]),
+)
+df = add_n_filter(
+    df,
+    ["wr_with_lead_diff", "wr_without_lead_diff"],
+    lambda row: wr_based_on_lead_diff(conn, row["team_1_id"], row["team_2_id"], row["date"]),
 )
 
 df.to_csv(dataset_path)
