@@ -3,7 +3,16 @@ import os
 import numpy as np
 import pandas as pd
 from data_loader import load_matches
-from features import avg_opps_rating_diff, highlights_diff, direct_hth, fk_fd_per_round_diff, indirect_hth, wr_diff, maps_strength_diff
+from features import (
+    avg_opps_rating_diff,
+    avg_rounds_after_win_n_loss,
+    highlights_diff,
+    direct_hth,
+    fk_fd_per_round_diff,
+    indirect_hth,
+    wr_diff,
+    maps_strength_diff,
+)
 
 db_path = os.path.join(os.getcwd(), "../../../database/vlr.db")
 dataset_path = os.path.join(os.getcwd(), "../../data/dataset.csv")
@@ -14,7 +23,7 @@ conn.execute("PRAGMA synchronous=NORMAL;")
 conn.execute("PRAGMA cache_size=160000;")
 
 df = load_matches(conn)
-df = df[:1000]
+df = df[:500]
 
 # Adding labels
 df["team_won"] = np.where(df["team_1_score"] > df["team_2_score"], 0, 1)
@@ -63,6 +72,11 @@ df = add_n_filter(
         "5ks_converted_rate_diff",
     ],
     lambda row: highlights_diff(conn, row["team_1_id"], row["team_2_id"], row["date"]),
+)
+df = add_n_filter(
+    df,
+    ["avg_rounds_win_after_round_win", "avg_rounds_loss_after_round_loss"],
+    lambda row: avg_rounds_after_win_n_loss(conn, row["team_1_id"], row["team_2_id"], row["date"]),
 )
 
 df.to_csv(dataset_path)

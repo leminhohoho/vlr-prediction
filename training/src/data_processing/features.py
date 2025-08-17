@@ -11,7 +11,7 @@ from data_loader import (
 from utils import subtract_date, divide
 
 
-def wr_diff(conn, t1_id, t2_id, date, min_maps=17):
+def wr_diff(conn, t1_id, t2_id, date, min_maps=16):
     t1_maps = load_team_played_maps_recently(conn, t1_id, date)
     t2_maps = load_team_played_maps_recently(conn, t2_id, date)
 
@@ -39,7 +39,7 @@ def wr_diff(conn, t1_id, t2_id, date, min_maps=17):
     return (t1_wr**2 - t2_wr**2) / 2
 
 
-def avg_opps_rating_diff(conn, t1_id, t2_id, date, min_maps=17):
+def avg_opps_rating_diff(conn, t1_id, t2_id, date, min_maps=16):
     t1_maps = load_team_played_maps_recently(conn, t1_id, date)
     t2_maps = load_team_played_maps_recently(conn, t2_id, date)
 
@@ -63,7 +63,7 @@ def avg_opps_rating_diff(conn, t1_id, t2_id, date, min_maps=17):
     return (t1_avg_opps_rating**2 - t2_avg_opps_rating**2) / 2
 
 
-def direct_hth(conn, t1_id, t2_id, date, min_maps=17):
+def direct_hth(conn, t1_id, t2_id, date, min_maps=16):
     t1_maps = load_team_played_maps_recently(conn, t1_id, date)
 
     if len(t1_maps) < min_maps:
@@ -92,7 +92,7 @@ def indirect_hth(conn, t1_id, t2_id, date):
     t1_maps = load_team_played_maps_recently(conn, t1_id, date)
     t2_maps = load_team_played_maps_recently(conn, t2_id, date)
 
-    if len(t1_maps) < 17 or len(t2_maps) < 17:
+    if len(t1_maps) < 16 or len(t2_maps) < 16:
         return None
 
     t1_wins = 0
@@ -143,7 +143,7 @@ def maps_strength_diff(conn, t1_id, t2_id, date):
     return strength_diff
 
 
-def fk_fd_per_round_diff(conn, t1_id, t2_id, date, min_maps=17):
+def fk_fd_per_round_diff(conn, t1_id, t2_id, date, min_maps=16):
     t1_fkfds = load_team_fkfd(conn, t1_id, date)
     t2_fkfds = load_team_fkfd(conn, t2_id, date)
 
@@ -158,68 +158,121 @@ def fk_fd_per_round_diff(conn, t1_id, t2_id, date, min_maps=17):
     return ((t1_fk_per_rounds**2 - t2_fk_per_rounds**2) / 2, (t1_fd_per_rounds**2 - t2_fd_per_rounds**2) / 2)
 
 
-def highlights_diff(conn, t1_id, t2_id, date, min_maps=17):
-    t1_highlights_log = load_team_highlights(conn, t1_id, date)
-    t2_highlights_log = load_team_highlights(conn, t2_id, date)
-    t1_maps = load_team_played_maps_recently(conn, t1_id, date)
-    t2_maps = load_team_played_maps_recently(conn, t2_id, date)
+def highlights_diff(conn, t1_id, t2_id, date, min_maps=16):
+    try:
+        t1_highlights_log = load_team_highlights(conn, t1_id, date)
+        t2_highlights_log = load_team_highlights(conn, t2_id, date)
+        t1_maps = load_team_played_maps_recently(conn, t1_id, date)
+        t2_maps = load_team_played_maps_recently(conn, t2_id, date)
+        t1_rounds = load_team_played_rounds_recently(conn, t1_id, date)
+        t2_rounds = load_team_played_rounds_recently(conn, t2_id, date)
+
+        t1_rounds_played = t1_maps["team_1_score"].sum() + t1_maps["team_2_score"].sum()
+        t2_rounds_played = t2_maps["team_1_score"].sum() + t2_maps["team_2_score"].sum()
+
+        if len(t1_maps) < min_maps or len(t2_maps) < min_maps or t1_rounds_played != len(t1_rounds) or t2_rounds_played != len(t2_rounds):
+            raise Exception()
+
+        def is_mk_win(rounds: pd.DataFrame, hl_type):
+            def convered(row):
+                round = rounds[
+                    (rounds["round_no"] == row["round_no"]) & (rounds["match_id"] == row["match_id"]) & (rounds["map_id"] == row["map_id"])
+                ]
+                if round.empty:
+                    raise Exception()
+                return row["team_id"] == round.iloc[0]["team_won"] and row["highlight_type"] == hl_type
+
+            return convered
+
+        t1_1v1s = len(t1_highlights_log[t1_highlights_log["highlight_type"] == "1v1"])
+        t1_1v2s = len(t1_highlights_log[t1_highlights_log["highlight_type"] == "1v2"]) / 2
+        t1_1v3s = len(t1_highlights_log[t1_highlights_log["highlight_type"] == "1v3"]) / 3
+        t1_1v4s = len(t1_highlights_log[t1_highlights_log["highlight_type"] == "1v4"]) / 4
+        t1_1v5s = len(t1_highlights_log[t1_highlights_log["highlight_type"] == "1v5"]) / 5
+        t1_2ks = len(t1_highlights_log[t1_highlights_log["highlight_type"] == "2k"]) / 2
+        t1_3ks = len(t1_highlights_log[t1_highlights_log["highlight_type"] == "3k"]) / 3
+        t1_4ks = len(t1_highlights_log[t1_highlights_log["highlight_type"] == "4k"]) / 4
+        t1_5ks = len(t1_highlights_log[t1_highlights_log["highlight_type"] == "5k"]) / 5
+        t1_2ks_converted = divide(len(t1_highlights_log[t1_highlights_log.apply(is_mk_win(t1_rounds, "2k"), axis=1)]) / 2, t1_2ks)
+        t1_3ks_converted = divide(len(t1_highlights_log[t1_highlights_log.apply(is_mk_win(t1_rounds, "3k"), axis=1)]) / 3, t1_2ks)
+        t1_4ks_converted = divide(len(t1_highlights_log[t1_highlights_log.apply(is_mk_win(t1_rounds, "4k"), axis=1)]) / 4, t1_2ks)
+        t1_5ks_converted = divide(len(t1_highlights_log[t1_highlights_log.apply(is_mk_win(t1_rounds, "5k"), axis=1)]) / 5, t1_2ks)
+        t2_1v1s = len(t2_highlights_log[t2_highlights_log["highlight_type"] == "1v1"])
+        t2_1v2s = len(t2_highlights_log[t2_highlights_log["highlight_type"] == "1v2"]) / 2
+        t2_1v3s = len(t2_highlights_log[t2_highlights_log["highlight_type"] == "1v3"]) / 3
+        t2_1v4s = len(t2_highlights_log[t2_highlights_log["highlight_type"] == "1v4"]) / 4
+        t2_1v5s = len(t2_highlights_log[t2_highlights_log["highlight_type"] == "1v5"]) / 5
+        t2_2ks = len(t2_highlights_log[t2_highlights_log["highlight_type"] == "2k"]) / 2
+        t2_3ks = len(t2_highlights_log[t2_highlights_log["highlight_type"] == "3k"]) / 3
+        t2_4ks = len(t2_highlights_log[t2_highlights_log["highlight_type"] == "4k"]) / 4
+        t2_5ks = len(t2_highlights_log[t2_highlights_log["highlight_type"] == "5k"]) / 5
+        t2_2ks_converted = divide(len(t2_highlights_log[t2_highlights_log.apply(is_mk_win(t2_rounds, "2k"), axis=1)]) / 2, t2_2ks)
+        t2_3ks_converted = divide(len(t2_highlights_log[t2_highlights_log.apply(is_mk_win(t2_rounds, "3k"), axis=1)]) / 3, t2_2ks)
+        t2_4ks_converted = divide(len(t2_highlights_log[t2_highlights_log.apply(is_mk_win(t2_rounds, "4k"), axis=1)]) / 4, t2_2ks)
+        t2_5ks_converted = divide(len(t2_highlights_log[t2_highlights_log.apply(is_mk_win(t2_rounds, "5k"), axis=1)]) / 5, t2_2ks)
+
+        return (
+            ((t1_1v1s / t1_rounds_played) ** 2 - (t2_1v1s / t2_rounds_played) ** 2) / 2,
+            ((t1_1v2s / t1_rounds_played) ** 2 - (t2_1v2s / t2_rounds_played) ** 2) / 2,
+            ((t1_1v3s / t1_rounds_played) ** 2 - (t2_1v3s / t2_rounds_played) ** 2) / 2,
+            ((t1_1v4s / t1_rounds_played) ** 2 - (t2_1v4s / t2_rounds_played) ** 2) / 2,
+            ((t1_1v5s / t1_rounds_played) ** 2 - (t2_1v5s / t2_rounds_played) ** 2) / 2,
+            ((t1_2ks / t1_rounds_played) ** 2 - (t2_2ks / t2_rounds_played) ** 2) / 2,
+            ((t1_3ks / t1_rounds_played) ** 2 - (t2_3ks / t2_rounds_played) ** 2) / 2,
+            ((t1_4ks / t1_rounds_played) ** 2 - (t2_4ks / t2_rounds_played) ** 2) / 2,
+            ((t1_5ks / t1_rounds_played) ** 2 - (t2_5ks / t2_rounds_played) ** 2) / 2,
+            (t1_2ks_converted**2 - t2_2ks_converted**2) / 2,
+            (t1_3ks_converted**2 - t2_3ks_converted**2) / 2,
+            (t1_4ks_converted**2 - t2_4ks_converted**2) / 2,
+            (t1_5ks_converted**2 - t2_5ks_converted**2) / 2,
+        )
+    except Exception as e:
+        return (None, None, None, None, None, None, None, None, None, None, None, None, None)
+
+
+def avg_rounds_after_win_n_loss(conn, t1_id, t2_id, date, min_maps=16):
     t1_rounds = load_team_played_rounds_recently(conn, t1_id, date)
     t2_rounds = load_team_played_rounds_recently(conn, t2_id, date)
+    t1_maps = load_team_played_maps_recently(conn, t1_id, date)
+    t2_maps = load_team_played_maps_recently(conn, t2_id, date)
 
     t1_rounds_played = t1_maps["team_1_score"].sum() + t1_maps["team_2_score"].sum()
     t2_rounds_played = t2_maps["team_1_score"].sum() + t2_maps["team_2_score"].sum()
 
-    if len(t1_maps) < min_maps or len(t2_maps) < min_maps or t1_rounds_played != len(t1_rounds) or t2_rounds_played != len(t2_rounds):
-        return (None, None, None, None, None, None, None, None, None, None, None, None, None)
+    if len(t1_maps) < min_maps or len(t2_maps) < min_maps or len(t1_rounds) != t1_rounds_played or len(t2_rounds) != t2_rounds_played:
+        return (None, None)
 
-    def is_mk_win(rounds: pd.DataFrame, hl_type):
-        def convered(row):
-            round = rounds[(rounds["round_no"] == row["round_no"]) & (rounds["match_id"] == row["match_id"]) & (rounds["map_id"] == row["map_id"])]
-            if round.empty:
-                return False
-            return row["team_id"] == round.iloc[0]["team_won"] and row["highlight_type"] == hl_type
+    def avg(rounds: pd.DataFrame, team_id):
+        maps = rounds.groupby(["match_id", "map_id"])
+        rounds_win = win_streaks = rounds_loss = loss_streaks = 0
+        for _, m in maps:
+            rwc = rlc = 0
+            for r in m.itertuples(index=False):
+                if r.team_won == team_id:
+                    rwc += 1
+                    if rlc:
+                        rounds_loss += rlc - 1
+                        loss_streaks += 1
+                        rlc = 0
+                else:
+                    rlc += 1
+                    if rwc:
+                        rounds_win += rwc - 1
+                        win_streaks += 1
+                        rwc = 0
+            if rwc:
+                rounds_win += rwc - 1
+                win_streaks += 1
+            if rlc:
+                rounds_loss += rlc - 1
+                loss_streaks += 1
 
-        return convered
+        return (divide(rounds_win, win_streaks), divide(rounds_loss, loss_streaks))
 
-    t1_1v1s = len(t1_highlights_log[t1_highlights_log["highlight_type"] == "1v1"])
-    t1_1v2s = len(t1_highlights_log[t1_highlights_log["highlight_type"] == "1v2"]) / 2
-    t1_1v3s = len(t1_highlights_log[t1_highlights_log["highlight_type"] == "1v3"]) / 3
-    t1_1v4s = len(t1_highlights_log[t1_highlights_log["highlight_type"] == "1v4"]) / 4
-    t1_1v5s = len(t1_highlights_log[t1_highlights_log["highlight_type"] == "1v5"]) / 5
-    t1_2ks = len(t1_highlights_log[t1_highlights_log["highlight_type"] == "2k"]) / 2
-    t1_3ks = len(t1_highlights_log[t1_highlights_log["highlight_type"] == "3k"]) / 3
-    t1_4ks = len(t1_highlights_log[t1_highlights_log["highlight_type"] == "4k"]) / 4
-    t1_5ks = len(t1_highlights_log[t1_highlights_log["highlight_type"] == "5k"]) / 5
-    t1_2ks_converted = divide(len(t1_highlights_log[t1_highlights_log.apply(is_mk_win(t1_rounds, "2k"), axis=1)]) / 2, t1_2ks)
-    t1_3ks_converted = divide(len(t1_highlights_log[t1_highlights_log.apply(is_mk_win(t1_rounds, "3k"), axis=1)]) / 3, t1_2ks)
-    t1_4ks_converted = divide(len(t1_highlights_log[t1_highlights_log.apply(is_mk_win(t1_rounds, "4k"), axis=1)]) / 4, t1_2ks)
-    t1_5ks_converted = divide(len(t1_highlights_log[t1_highlights_log.apply(is_mk_win(t1_rounds, "5k"), axis=1)]) / 5, t1_2ks)
-    t2_1v1s = len(t2_highlights_log[t2_highlights_log["highlight_type"] == "1v1"])
-    t2_1v2s = len(t2_highlights_log[t2_highlights_log["highlight_type"] == "1v2"]) / 2
-    t2_1v3s = len(t2_highlights_log[t2_highlights_log["highlight_type"] == "1v3"]) / 3
-    t2_1v4s = len(t2_highlights_log[t2_highlights_log["highlight_type"] == "1v4"]) / 4
-    t2_1v5s = len(t2_highlights_log[t2_highlights_log["highlight_type"] == "1v5"]) / 5
-    t2_2ks = len(t2_highlights_log[t2_highlights_log["highlight_type"] == "2k"]) / 2
-    t2_3ks = len(t2_highlights_log[t2_highlights_log["highlight_type"] == "3k"]) / 3
-    t2_4ks = len(t2_highlights_log[t2_highlights_log["highlight_type"] == "4k"]) / 4
-    t2_5ks = len(t2_highlights_log[t2_highlights_log["highlight_type"] == "5k"]) / 5
-    t2_2ks_converted = divide(len(t2_highlights_log[t2_highlights_log.apply(is_mk_win(t2_rounds, "2k"), axis=1)]) / 2, t2_2ks)
-    t2_3ks_converted = divide(len(t2_highlights_log[t2_highlights_log.apply(is_mk_win(t2_rounds, "3k"), axis=1)]) / 3, t2_2ks)
-    t2_4ks_converted = divide(len(t2_highlights_log[t2_highlights_log.apply(is_mk_win(t2_rounds, "4k"), axis=1)]) / 4, t2_2ks)
-    t2_5ks_converted = divide(len(t2_highlights_log[t2_highlights_log.apply(is_mk_win(t2_rounds, "5k"), axis=1)]) / 5, t2_2ks)
+    t1_avg_round_win_after_win, t1_avg_round_loss_after_loss = avg(t1_rounds, t1_id)
+    t2_avg_round_win_after_win, t2_avg_round_loss_after_loss = avg(t2_rounds, t2_id)
 
     return (
-        ((t1_1v1s / t1_rounds_played) ** 2 - (t2_1v1s / t2_rounds_played) ** 2) / 2,
-        ((t1_1v2s / t1_rounds_played) ** 2 - (t2_1v2s / t2_rounds_played) ** 2) / 2,
-        ((t1_1v3s / t1_rounds_played) ** 2 - (t2_1v3s / t2_rounds_played) ** 2) / 2,
-        ((t1_1v4s / t1_rounds_played) ** 2 - (t2_1v4s / t2_rounds_played) ** 2) / 2,
-        ((t1_1v5s / t1_rounds_played) ** 2 - (t2_1v5s / t2_rounds_played) ** 2) / 2,
-        ((t1_2ks / t1_rounds_played) ** 2 - (t2_2ks / t2_rounds_played) ** 2) / 2,
-        ((t1_3ks / t1_rounds_played) ** 2 - (t2_3ks / t2_rounds_played) ** 2) / 2,
-        ((t1_4ks / t1_rounds_played) ** 2 - (t2_4ks / t2_rounds_played) ** 2) / 2,
-        ((t1_5ks / t1_rounds_played) ** 2 - (t2_5ks / t2_rounds_played) ** 2) / 2,
-        (t1_2ks_converted**2 - t2_2ks_converted**2) / 2,
-        (t1_3ks_converted**2 - t2_3ks_converted**2) / 2,
-        (t1_4ks_converted**2 - t2_4ks_converted**2) / 2,
-        (t1_5ks_converted**2 - t2_5ks_converted**2) / 2,
+        (t1_avg_round_win_after_win**2 - t2_avg_round_win_after_win**2) / 2,
+        (t1_avg_round_loss_after_loss**2 - t2_avg_round_loss_after_loss**2) / 2,
     )
