@@ -1,6 +1,6 @@
 import math
 import pandas as pd
-from data_loader import load_current_map_pool, load_team_maps_stats_recently, load_team_played_maps_recently
+from data_loader import load_current_map_pool, load_team_fkfd, load_team_maps_stats_recently, load_team_played_maps_recently
 from utils import subtract_date
 
 
@@ -140,3 +140,20 @@ def maps_strength_diff(conn, t1_id, t2_id, date):
         strength_diff += map_wr_diff
 
     return strength_diff
+
+
+def fk_fd_per_round_diff(conn, t1_id, t2_id, date, min_maps=17):
+    t1_fkfds = load_team_fkfd(conn, t1_id, date)
+    t2_fkfds = load_team_fkfd(conn, t2_id, date)
+
+    if len(t1_fkfds) < min_maps or len(t2_fkfds) < min_maps:
+        return (None, None)
+
+    t1_fk_per_rounds = t1_fkfds["fks"].sum() / t1_fkfds["rounds"].sum()
+    t1_fd_per_rounds = t1_fkfds["fds"].sum() / t1_fkfds["rounds"].sum()
+    t2_fk_per_rounds = t2_fkfds["fks"].sum() / t2_fkfds["rounds"].sum()
+    t2_fd_per_rounds = t2_fkfds["fds"].sum() / t2_fkfds["rounds"].sum()
+
+    return ((t1_fk_per_rounds**2 - t2_fk_per_rounds**2) / 2, (t1_fd_per_rounds**2 - t2_fd_per_rounds**2) / 2)
+
+def clutches_per_round_diff(conn, t1_id, t2_id, date, min_maps=17):

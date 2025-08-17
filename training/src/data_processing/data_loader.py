@@ -63,7 +63,7 @@ WHERE (
   AND m."date" > date(:date, '-90 days')
   AND m."date" < :date
 GROUP BY mm.map_id
-""",
+        """,
         conn,
         params={"team_id": team_id, "date": date},
     )
@@ -80,7 +80,42 @@ WHERE date = (
     WHERE date <= :date
 )
 ORDER BY map_id
-                """,
+        """,
         conn,
         params={"date": date},
+    )
+
+
+def load_team_fkfd(conn: sqlite3.Connection, team_id, date):
+    return pd.read_sql(
+        """
+SELECT
+    (
+        SELECT
+            (
+                mm.team_1_def_score + mm.team_1_atk_score + mm.team_1_ot_score + mm.team_2_def_score + mm.team_2_atk_score + mm.team_2_ot_score
+            )
+        FROM
+            match_maps AS mm
+        WHERE
+            mm.match_id = pos.match_id
+            AND mm.map_id = pos.map_id
+    ) AS rounds,
+    SUM(pos.first_kills) AS fks,
+    SUM(pos.first_deaths) AS fds
+FROM
+    player_overview_stats AS pos
+    JOIN matches AS m ON m.id = pos.match_id
+WHERE
+    pos.team_id = :team_id
+    AND m."date" > date(:date, '-90 days')
+    AND m."date" < :date
+GROUP BY
+    pos.match_id,
+    pos.map_id
+ORDER BY
+    m."date" DESC
+        """,
+        conn,
+        params={"team_id": team_id, "date": date},
     )
