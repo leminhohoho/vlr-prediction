@@ -1,6 +1,6 @@
 import math
 import pandas as pd
-from data_loader import load_current_map_pool, load_team_fkfd, load_team_maps_stats_recently, load_team_played_maps_recently
+from data_loader import load_current_map_pool, load_team_clutches_stats, load_team_fkfd, load_team_maps_stats_recently, load_team_played_maps_recently
 from utils import subtract_date
 
 
@@ -156,4 +156,29 @@ def fk_fd_per_round_diff(conn, t1_id, t2_id, date, min_maps=17):
 
     return ((t1_fk_per_rounds**2 - t2_fk_per_rounds**2) / 2, (t1_fd_per_rounds**2 - t2_fd_per_rounds**2) / 2)
 
+
 def clutches_per_round_diff(conn, t1_id, t2_id, date, min_maps=17):
+    t1_clutches_stats = load_team_clutches_stats(conn, t1_id, date)
+    t2_clutches_stats = load_team_clutches_stats(conn, t2_id, date)
+
+    if len(t1_clutches_stats) < min_maps or len(t2_clutches_stats) < min_maps:
+        return (None, None, None, None, None)
+
+    t1_1v1s_per_rounds = t1_clutches_stats["p_1v1s"].sum() / t1_clutches_stats["rounds"].sum()
+    t1_1v2s_per_rounds = t1_clutches_stats["p_1v2s"].sum() / t1_clutches_stats["rounds"].sum()
+    t1_1v3s_per_rounds = t1_clutches_stats["p_1v3s"].sum() / t1_clutches_stats["rounds"].sum()
+    t1_1v4s_per_rounds = t1_clutches_stats["p_1v4s"].sum() / t1_clutches_stats["rounds"].sum()
+    t1_1v5s_per_rounds = t1_clutches_stats["p_1v5s"].sum() / t1_clutches_stats["rounds"].sum()
+    t2_1v1s_per_rounds = t2_clutches_stats["p_1v1s"].sum() / t2_clutches_stats["rounds"].sum()
+    t2_1v2s_per_rounds = t2_clutches_stats["p_1v2s"].sum() / t2_clutches_stats["rounds"].sum()
+    t2_1v3s_per_rounds = t2_clutches_stats["p_1v3s"].sum() / t2_clutches_stats["rounds"].sum()
+    t2_1v4s_per_rounds = t2_clutches_stats["p_1v4s"].sum() / t2_clutches_stats["rounds"].sum()
+    t2_1v5s_per_rounds = t2_clutches_stats["p_1v5s"].sum() / t2_clutches_stats["rounds"].sum()
+
+    return (
+        (t1_1v1s_per_rounds**2 - t2_1v1s_per_rounds**2) / 2,
+        (t1_1v2s_per_rounds**2 - t2_1v2s_per_rounds**2) / 2,
+        (t1_1v3s_per_rounds**2 - t2_1v3s_per_rounds**2) / 2,
+        (t1_1v4s_per_rounds**2 - t2_1v4s_per_rounds**2) / 2,
+        (t1_1v5s_per_rounds**2 - t2_1v5s_per_rounds**2) / 2,
+    )

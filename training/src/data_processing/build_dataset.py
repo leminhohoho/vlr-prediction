@@ -3,7 +3,7 @@ import os
 import numpy as np
 import pandas as pd
 from data_loader import load_matches
-from features import avg_opps_rating_diff, direct_hth, fk_fd_per_round_diff, indirect_hth, wr_diff, maps_strength_diff
+from features import avg_opps_rating_diff, clutches_per_round_diff, direct_hth, fk_fd_per_round_diff, indirect_hth, wr_diff, maps_strength_diff
 
 db_path = os.path.join(os.getcwd(), "../../../database/vlr.db")
 dataset_path = os.path.join(os.getcwd(), "../../data/dataset.csv")
@@ -44,6 +44,11 @@ df = add_n_filter(
     df,
     ["fk_per_round_diff", "fd_per_round_diff"],
     lambda row: fk_fd_per_round_diff(conn, row["team_1_id"], row["team_2_id"], row["date"]),
+)
+df = add_n_filter(
+    df,
+    ["1v1s_per_round_diff", "1v2s_per_round_diff", "1v3s_per_round_diff", "1v4s_per_round_diff", "1v5s_per_round_diff"],
+    lambda row: clutches_per_round_diff(conn, row["team_1_id"], row["team_2_id"], row["date"]),
 )
 
 df.to_csv(dataset_path)

@@ -119,3 +119,68 @@ ORDER BY
         conn,
         params={"team_id": team_id, "date": date},
     )
+
+
+def load_team_clutches_stats(conn, team_id, date):
+    return pd.read_sql(
+        """
+SELECT
+    (
+        SELECT
+            (
+                mm.team_1_def_score + mm.team_1_atk_score + mm.team_1_ot_score + mm.team_2_def_score + mm.team_2_atk_score + mm.team_2_ot_score
+            )
+        FROM
+            match_maps AS mm
+        WHERE
+            mm.match_id = ph.match_id
+            AND mm.map_id = ph.map_id
+    ) AS rounds,
+    SUM(
+        CASE
+            WHEN ph.highlight_type = '1v1' THEN 1
+            ELSE 0
+        END
+    ) / 1 AS p_1v1s,
+    SUM(
+        CASE
+            WHEN ph.highlight_type = '1v2' THEN 1
+            ELSE 0
+        END
+    ) / 2 AS p_1v2s,
+    SUM(
+        CASE
+            WHEN ph.highlight_type = '1v3' THEN 1
+            ELSE 0
+        END
+    ) / 3 AS p_1v3s,
+    SUM(
+        CASE
+            WHEN ph.highlight_type = '1v4' THEN 1
+            ELSE 0
+        END
+    ) / 4 AS p_1v4s,
+    SUM(
+        CASE
+            WHEN ph.highlight_type = '1v5' THEN 1
+            ELSE 0
+        END
+    ) / 5 AS p_1v5s
+FROM
+    player_highlights AS ph
+    JOIN matches AS m ON ph.match_id = m.id
+WHERE
+    ph.team_id = :team_id
+    AND ph.highlight_type IN ('1v1', '1v2', '1v3', '1v4', '1v5')
+    AND m."date" > date(:date, '-90 days')
+    AND m."date" < :date
+GROUP BY
+    ph.match_id,
+    ph.map_id,
+    ph.team_id
+ORDER BY
+    m.date DESC
+        """,
+        conn,
+        params={"team_id": team_id, "date": date},
+    )
