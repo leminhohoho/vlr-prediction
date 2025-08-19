@@ -10,6 +10,7 @@ from features import (
     direct_hth,
     fk_fd_per_round_diff,
     indirect_hth,
+    key_round_wr_diff,
     wr_based_on_lead_diff,
     wr_diff,
     maps_strength_diff,
@@ -24,7 +25,6 @@ conn.execute("PRAGMA synchronous=NORMAL;")
 conn.execute("PRAGMA cache_size=160000;")
 
 df = load_matches(conn)
-df = df[:500]
 
 # Adding labels
 df["team_won"] = np.where(df["team_1_score"] > df["team_2_score"], 0, 1)
@@ -84,6 +84,7 @@ df = add_n_filter(
     ["wr_with_lead_diff", "wr_without_lead_diff"],
     lambda row: wr_based_on_lead_diff(conn, row["team_1_id"], row["team_2_id"], row["date"]),
 )
+df = add_n_filter(df, "key_round_wr", lambda row: key_round_wr_diff(conn, row["team_1_id"], row["team_2_id"], row["date"]))
 
 df.to_csv(dataset_path)
 print(df)

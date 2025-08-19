@@ -309,12 +309,67 @@ def wr_based_on_lead_diff(conn, t1_id, t2_id, date, min_maps=16):
         | ((t2_maps["team_def_first"] != t2_id) & (t2_maps["team_2_id"] == t2_id) & (t2_maps["team_2_atk_score"] < 6))
     ]
 
-    t1_wr_with_lead = count_maps_win(t1_maps_with_lead, t1_id, date) / len(t1_maps_with_lead)
-    t1_wr_without_lead = count_maps_win(t1_maps_without_lead, t1_id, date) / len(t1_maps_without_lead)
-    t2_wr_with_lead = count_maps_win(t2_maps_with_lead, t2_id, date) / len(t2_maps_with_lead)
-    t2_wr_without_lead = count_maps_win(t2_maps_without_lead, t2_id, date) / len(t2_maps_without_lead)
+    t1_wr_with_lead = divide(count_maps_win(t1_maps_with_lead, t1_id, date), len(t1_maps_with_lead))
+    t1_wr_without_lead = divide(count_maps_win(t1_maps_without_lead, t1_id, date), len(t1_maps_without_lead))
+    t2_wr_with_lead = divide(count_maps_win(t2_maps_with_lead, t2_id, date), len(t2_maps_with_lead))
+    t2_wr_without_lead = divide(count_maps_win(t2_maps_without_lead, t2_id, date), len(t2_maps_without_lead))
 
     return (
         (t1_wr_with_lead**2 - t2_wr_with_lead**2) / 2,
         (t1_wr_without_lead**2 - t2_wr_without_lead**2) / 2,
     )
+
+
+def key_round_wr_diff(conn, t1_id, t2_id, date, min_maps=16):
+    t1_rounds = load_team_played_rounds_recently(conn, t1_id, date)
+    t2_rounds = load_team_played_rounds_recently(conn, t2_id, date)
+    t1_maps = load_team_played_maps_recently(conn, t1_id, date)
+    t2_maps = load_team_played_maps_recently(conn, t2_id, date)
+
+    t1_rounds_played = t1_maps["team_1_score"].sum() + t1_maps["team_2_score"].sum()
+    t2_rounds_played = t2_maps["team_1_score"].sum() + t2_maps["team_2_score"].sum()
+
+    if len(t1_maps) < min_maps or len(t2_maps) < min_maps or len(t1_rounds) != t1_rounds_played or len(t2_rounds) != t2_rounds_played:
+        return None
+
+    def is_key_round(team_id, team_score, team_against_score, round):
+        if team_score >= 12 and team_against_score >= 12:
+            return True
+
+        team_bank = round.team_1_bank if team_id == round.team_1_id else round.team_2_bank
+        team_buy_type = round.team_1_buy_type if team_id == round.team_1_id else round.team_2_buy_type
+        team_against_bank = round.team_2_bank if team_id == round.team_1_id else round.team_1_bank
+        team_against_buy_type = round.team_2_buy_type if team_id == round.team_1_id else round.team_1_buy_type
+
+        if team_buy_type not in ["semi_buy", "full_buy"] or team_against_buy_type not in ["semi_buy", "full_buy"]:
+            return False
+
+        if team_bank <= 3000:
+            return True
+
+        if team_score in [10, 11, 12] or team_against_score in [10, 11, 12]:
+            return True
+
+        if team_score < team_against_score and team_against_bank <= 3000:
+            return True
+
+        return False
+
+    def calc_key_round_wr(rounds: pd.DataFrame, team_id):
+        key_rounds_count = key_rounds_won = 0
+        for _, map_rounds in rounds.groupby(["match_id", "map_id"]):
+            team_score = team_against_score = 0
+            for round in map_rounds.itertuples(index=False):
+                if is_key_round(team_id, team_score, team_against_score, round):
+                    key_rounds_count += 1
+                    key_rounds_won += 1 if round.team_won == team_id else 0
+
+                team_score += 1 if round.team_won == team_id else 0
+                team_against_score += 1 if round.team_won != team_id else 0
+
+        return divide(key_rounds_won, key_rounds_count)
+
+    t1_key_round_wr = calc_key_round_wr(t1_rounds, t1_id)
+    t2_key_round_wr = calc_key_round_wr(t2_rounds, t2_id)
+
+    return (t1_key_round_wr**2 - t2_key_round_wr**2) / 2
