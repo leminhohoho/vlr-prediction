@@ -178,7 +178,7 @@ func crawlMatchesUpToDate(dateLimit time.Time) ([]MatchToBeScraped, error) {
 					return
 				}
 
-				if matchDate.Before(dateLimit) || matchDate.Equal(dateLimit) {
+				if matchDate.Before(dateLimit) {
 					resChan <- matchesToBeScraped
 					return
 				}
