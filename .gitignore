@@ -7,3 +7,5 @@ main
 *-wal
 .ipynb_checkpoints
 __pycache__
+;
+*.png
