@@ -8,8 +8,12 @@ def subtract_date(date_str_1, date_str_2):
     return (datetime_1 - datetime_2).days
 
 
-def divide(wins, losses):
+def calc_wr(wins, losses):
     if wins == 0 and losses == 0:
         return 0
 
     return wins / (wins + losses)
+
+
+def divide(a, b):
+    return 0 if b == 0 else a / b

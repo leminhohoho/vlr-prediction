@@ -25,7 +25,7 @@ SELECT
 FROM match_maps AS mms JOIN matches AS m ON mms.match_id = m.id
 WHERE
     (m.team_1_id = :team_id OR m.team_2_id = :team_id)
-    AND "date" > date(:date, '-90 days')
+    AND "date" > date(:date, '-180 days')
     AND "date" < :date
 """,
         conn,
@@ -60,7 +60,7 @@ FROM mms AS mm
 WHERE (
     mm.team_1_id = :team_id OR mm.team_2_id = :team_id
   )
-  AND m."date" > date(:date, '-90 days')
+  AND m."date" > date(:date, '-180 days')
   AND m."date" < :date
 GROUP BY mm.map_id
         """,
@@ -108,7 +108,7 @@ FROM
     JOIN matches AS m ON m.id = pos.match_id
 WHERE
     pos.team_id = :team_id
-    AND m."date" > date(:date, '-90 days')
+    AND m."date" > date(:date, '-180 days')
     AND m."date" < :date
 GROUP BY
     pos.match_id,
@@ -131,7 +131,7 @@ FROM
     JOIN matches AS m ON ph.match_id = m.id
 WHERE
     ph.team_id = :team_id
-    AND m."date" > date(:date, '-90 days')
+    AND m."date" > date(:date, '-180 days')
     AND m."date" < :date
 """,
         conn,
@@ -152,9 +152,120 @@ WHERE
         rs.team_1_id = :team_id
         OR rs.team_2_id = :team_id
     )
-    AND m."date" > date(:date, '-90 days')
+    AND m."date" > date(:date, '-180 days')
     AND m."date" < :date
         """,
         conn,
         params={"team_id": team_id, "date": date},
+    )
+
+
+def load_map_players_overview_stats(
+    conn: sqlite3.Connection, match_id: int, map_id: int, team_id: int
+):
+    return pd.read_sql(
+        """
+SELECT
+    *,
+    (
+        SELECT
+            agent_type
+        FROM
+            agents
+        WHERE
+            id = agent_id
+        LIMIT
+            1
+    ) AS role
+FROM
+    player_overview_stats
+WHERE
+    match_id = :match_id
+    AND map_id = :map_id
+    AND team_id = :team_id
+        """,
+        conn,
+        params={"match_id": match_id, "map_id": map_id, "team_id": team_id},
+    )
+
+
+def load_players_highlights_log(
+    conn: sqlite3.Connection, match_id: int, map_id: int, team_id: int
+):
+    return pd.read_sql(
+        """
+SELECT
+    *
+FROM
+    player_highlights
+WHERE
+    match_id = :match_id
+    AND map_id = :map_id
+    AND team_id = :team_id;
+        """,
+        conn,
+        params={"match_id": match_id, "map_id": map_id, "team_id": team_id},
+    )
+
+
+def load_map_rounds_stats(
+    conn: sqlite3.Connection, match_id: int, map_id: int, team_id: int
+):
+    return pd.read_sql(
+        """
+SELECT
+    match_id,
+    map_id,
+    round_no,
+    (
+        CASE
+            WHEN team_1_id = :team_id THEN team_1_id
+            WHEN team_2_id = :team_id THEN team_2_id
+        END
+    ) AS team_id,
+    (
+        CASE
+            WHEN team_1_id = :team_id THEN team_2_id
+            WHEN team_2_id = :team_id THEN team_1_id
+        END
+    ) AS team_against_id,
+    team_def,
+    (
+        CASE
+            WHEN team_1_id = :team_id THEN team_1_buy_type
+            WHEN team_2_id = :team_id THEN team_2_buy_type
+        END
+    ) AS team_buy_type,
+    (
+        CASE
+            WHEN team_1_id = :team_id THEN team_2_buy_type
+            WHEN team_2_id = :team_id THEN team_1_buy_type
+        END
+    ) AS team_against_buy_type,
+    (
+        CASE
+            WHEN team_1_id = :team_id THEN team_1_bank
+            WHEN team_2_id = :team_id THEN team_2_bank
+        END
+    ) AS team_bank,
+    (
+        CASE
+            WHEN team_1_id = :team_id THEN team_2_bank
+            WHEN team_2_id = :team_id THEN team_1_bank
+        END
+    ) AS team_against_bank,
+    team_won,
+    won_method
+FROM
+    round_stats
+WHERE
+    match_id = :match_id
+    AND map_id = :map_id
+    AND (
+        team_1_id = :team_id
+        OR team_2_id = :team_id
+    );
+        """,
+        conn,
+        params={"match_id": match_id, "map_id": map_id, "team_id": team_id},
     )
