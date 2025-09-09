@@ -1,6 +1,6 @@
 import os
 import sqlite3
-from src.features import get_duel_stats, get_players_stats
+from src.features import get_duel_stats, get_players_stats, get_rounds_stats
 from src.utils import load_players_stats, load_rounds_stats, load_highlights
 
 module_dir = os.path.dirname(os.path.abspath(__file__))
@@ -35,3 +35,19 @@ def test_players_stats():
     players.to_csv("/tmp/players_test.csv")
     print()
     print(players)
+
+
+def test_round_stats():
+    rounds = load_rounds_stats(conn, 878, "2025-09-07")
+    highlights = load_highlights(conn, 878, "2025-09-07")
+    opp_highlights = load_highlights(conn, 8304, "2025-09-07")
+
+    rounds = rounds[(rounds["match_id"] == 530364) & (rounds["map_id"] == 10)]
+    highlights = highlights[(highlights["match_id"] == 530364) & (highlights["map_id"] == 10)]
+    opp_highlights = opp_highlights[(opp_highlights["match_id"] == 530364) & (opp_highlights["map_id"] == 10)]
+
+    rounds_stats = get_rounds_stats(rounds, highlights, opp_highlights)
+    rounds_stats.to_csv("/tmp/rounds_test.csv")
+
+    print()
+    print(rounds_stats)
