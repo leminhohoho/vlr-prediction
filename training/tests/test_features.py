@@ -23,9 +23,9 @@ def test_duel_stats():
 
 
 def test_players_stats():
-    players_stats = load_players_stats(conn, 878, "2025-09-07")
-    rounds = load_rounds_stats(conn, 878, "2025-09-07")
-    highlights = load_highlights(conn, 878, "2025-09-07")
+    players_stats = load_players_stats(conn, 878, date="2025-09-07")
+    rounds = load_rounds_stats(conn, 878, date="2025-09-07")
+    highlights = load_highlights(conn, 878, date="2025-09-07")
 
     players_stats = players_stats[(players_stats["match_id"] == 530364) & (players_stats["map_id"] == 10)]
     rounds = rounds[(rounds["match_id"] == 530364) & (rounds["map_id"] == 10)]
@@ -38,9 +38,9 @@ def test_players_stats():
 
 
 def test_round_stats():
-    rounds = load_rounds_stats(conn, 878, "2025-09-07")
-    highlights = load_highlights(conn, 878, "2025-09-07")
-    opp_highlights = load_highlights(conn, 8304, "2025-09-07")
+    rounds = load_rounds_stats(conn, 878, date="2025-09-07")
+    highlights = load_highlights(conn, 878, date="2025-09-07")
+    opp_highlights = load_highlights(conn, 8304, date="2025-09-07")
 
     rounds = rounds[(rounds["match_id"] == 530364) & (rounds["map_id"] == 10)]
     highlights = highlights[(highlights["match_id"] == 530364) & (highlights["map_id"] == 10)]
@@ -54,8 +54,8 @@ def test_round_stats():
 
 
 def test_match_maps_stats():
-    players_stats = load_players_stats(conn, 878, "2025-09-07", match_id=530364)
-    opp_players_stats = load_players_stats(conn, 8304, "2025-09-07", match_id=530364)
+    players_stats = load_players_stats(conn, 878, match_id=530364)
+    opp_players_stats = load_players_stats(conn, 8304, match_id=530364)
     maps = load_maps(conn, "2025-09-07")
 
     maps = maps[maps["match_id"] == 530364]

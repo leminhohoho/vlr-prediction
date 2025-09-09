@@ -1,6 +1,5 @@
 import pandas as pd
 import numpy as np
-from src.utils import load_players_stats
 
 
 def get_player_stats(enriched_highlights_df: pd.DataFrame, rounds_df: pd.DataFrame):

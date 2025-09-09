@@ -28,7 +28,7 @@ WHERE
     )
 
 
-def load_players_stats(conn: sqlite3.Connection, team_id: int, date: str, duration=180, match_id=None, map_id=None):
+def load_players_stats(conn: sqlite3.Connection, team_id: int, date=None, duration=180, match_id=None, map_id=None):
     query = """
 SELECT 
     pos.*, 
@@ -40,10 +40,11 @@ SELECT
 FROM player_overview_stats AS pos
 JOIN matches AS m ON m.id = pos.match_id
 WHERE 
-    pos.team_id = :team_id AND
-    m.date > date(:date, :duration) AND
-    m.date < :date
+    pos.team_id = :team_id
         """
+
+    if date is not None:
+        query += f" AND m.date > date('{date}', '-{duration} days') AND m.date < '{date}'"
 
     if match_id is not None:
         query += f" AND pos.match_id = {match_id}"
@@ -51,12 +52,11 @@ WHERE
     if map_id is not None:
         query += f" AND pos.map_id = {map_id}"
 
-    return pd.read_sql(query, conn, params={"team_id": team_id, "date": date, "duration": f"-{duration} days"})
+    return pd.read_sql(query, conn, params={"team_id": team_id})
 
 
-def load_rounds_stats(conn: sqlite3.Connection, team_id: int, date: str, duration=180):
-    return pd.read_sql(
-        """
+def load_rounds_stats(conn: sqlite3.Connection, team_id: int, date=None, duration=180):
+    query = """
 SELECT
     rs.match_id,
     rs.map_id,
@@ -105,38 +105,37 @@ FROM
     round_stats AS rs
     JOIN matches AS m ON m.id = rs.match_id 
 WHERE
-    (rs.team_1_id = :team_id OR rs.team_2_id = :team_id) AND
-    m.date > date(:date, :duration) AND
-    m.date < :date
-ORDER BY m."date" DESC, rs.match_id, rs.map_id, round_no ASC
-        """,
-        conn,
-        params={"team_id": team_id, "date": date, "duration": f"-{duration} days"},
-    )
-
-
-def load_highlights(conn: sqlite3.Connection, team_id: int, date: str, duration=180):
-    return pd.read_sql(
+    (rs.team_1_id = :team_id OR rs.team_2_id = :team_id)
         """
+
+    if date is not None:
+        query += f" AND m.date > date('{date}', '-{duration} days') AND m.date < '{date}'"
+
+    query += ' ORDER BY m."date" DESC, rs.match_id, rs.map_id, round_no ASC'
+
+    return pd.read_sql(query, conn, params={"team_id": team_id})
+
+
+def load_highlights(conn: sqlite3.Connection, team_id: int, date=None, duration=180):
+    query = """
 SELECT ph.*, m."date" FROM 
 player_highlights AS ph
 JOIN matches AS m ON m.id = ph.match_id
 WHERE 
-    ph.team_id = :team_id AND
-    m.date > date(:date, :duration) AND
-    m.date < :date
-        """,
-        conn,
-        params={"team_id": team_id, "date": date, "duration": f"-{duration} days"},
-    )
+    ph.team_id = :team_id
+        """
+
+    if date is not None:
+        query += f" AND m.date > date('{date}', '-{duration} days') AND m.date < '{date}'"
+
+    return pd.read_sql(query, conn, params={"team_id": team_id})
 
 
-def load_maps(conn: sqlite3.Connection, date: str, duration=180, match_id=-1):
+def load_maps(conn: sqlite3.Connection, date=None, duration=180, match_id=-1):
     """
     match_id is optional, for distinguish between the curent match that the past matches is fetched for and the other matches
     """
-    return pd.read_sql(
-        """
+    query = """
 SELECT 
     mm.match_id,
     mm.map_id,
@@ -160,10 +159,14 @@ FROM
     match_maps AS mm
     JOIN matches AS m ON m.id = mm.match_id 
 WHERE 
-    m.date > date(:date, :duration) AND
-    m.date < :date AND 
     mm.match_id != :match_id
-    """,
+    """
+
+    if date is not None:
+        query += f" AND m.date > date('{date}', '-{duration} days') AND m.date < '{date}'"
+
+    return pd.read_sql(
+        query,
         conn,
-        params={"date": date, "duration": f"-{duration} days", "match_id": match_id},
+        params={"match_id": match_id},
     )
