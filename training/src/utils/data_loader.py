@@ -1,4 +1,3 @@
-from numpy import integer
 import pandas as pd
 import sqlite3
 
@@ -32,10 +31,94 @@ WHERE
 def load_players_stats(conn: sqlite3.Connection, team_id: int, date: str, duration=180):
     return pd.read_sql(
         """
-SELECT pos.* FROM player_overview_stats AS pos
+SELECT 
+    pos.*, 
+      (
+        SELECT agent_type FROM agents
+        WHERE id = pos.agent_id
+        LIMIT 1
+    ) AS role
+FROM player_overview_stats AS pos
 JOIN matches AS m ON m.id = pos.match_id
 WHERE 
     pos.team_id = :team_id AND
+    m.date > date(:date, :duration) AND
+    m.date < :date
+        """,
+        conn,
+        params={"team_id": team_id, "date": date, "duration": f"-{duration} days"},
+    )
+
+
+def load_rounds_stats(conn: sqlite3.Connection, team_id: int, date: str, duration=180):
+    return pd.read_sql(
+        """
+SELECT
+    rs.match_id,
+    rs.map_id,
+    rs.round_no,
+    (
+        CASE
+            WHEN rs.team_1_id = :team_id THEN rs.team_1_id
+            WHEN rs.team_2_id = :team_id THEN rs.team_2_id
+        END
+    ) AS team_id,
+    (
+        CASE
+            WHEN rs.team_1_id = :team_id THEN rs.team_2_id
+            WHEN rs.team_2_id = :team_id THEN rs.team_1_id
+        END
+    ) AS team_against_id,
+    (
+        CASE
+            WHEN rs.team_1_id = :team_id THEN rs.team_1_buy_type
+            WHEN rs.team_2_id = :team_id THEN rs.team_2_buy_type
+        END
+    ) AS team_buy_type,
+    (
+        CASE
+            WHEN rs.team_1_id = :team_id THEN rs.team_2_buy_type
+            WHEN rs.team_2_id = :team_id THEN rs.team_1_buy_type
+        END
+    ) AS team_against_buy_type,
+    (
+        CASE
+            WHEN rs.team_1_id = :team_id THEN rs.team_1_bank
+            WHEN rs.team_2_id = :team_id THEN rs.team_2_bank
+        END
+    ) AS team_bank,
+    (
+        CASE
+            WHEN rs.team_1_id = :team_id THEN rs.team_2_bank
+            WHEN rs.team_2_id = :team_id THEN rs.team_1_bank
+        END
+    ) AS team_against_bank,
+    (rs.team_def = :team_id) AS def,
+    (rs.team_won = :team_id) AS won,
+    rs.won_method,
+    m."date"
+FROM
+    round_stats AS rs
+    JOIN matches AS m ON m.id = rs.match_id 
+WHERE
+    (rs.team_1_id = :team_id OR rs.team_2_id = :team_id) AND
+    m.date > date(:date, :duration) AND
+    m.date < :date
+ORDER BY m."date" DESC, rs.match_id, rs.map_id, round_no ASC
+        """,
+        conn,
+        params={"team_id": team_id, "date": date, "duration": f"-{duration} days"},
+    )
+
+
+def load_highlights(conn: sqlite3.Connection, team_id: int, date: str, duration=180):
+    return pd.read_sql(
+        """
+SELECT ph.*, m."date" FROM 
+player_highlights AS ph
+JOIN matches AS m ON m.id = ph.match_id
+WHERE 
+    ph.team_id = :team_id AND
     m.date > date(:date, :duration) AND
     m.date < :date
         """,
