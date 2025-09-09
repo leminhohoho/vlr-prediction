@@ -1,6 +1,5 @@
 import os
 import sqlite3
-import pandas as pd
 from src.features import get_duel_stats
 
 module_dir = os.path.dirname(os.path.abspath(__file__))

@@ -1,3 +1,4 @@
+from numpy import integer
 import pandas as pd
 import sqlite3
 
@@ -25,4 +26,19 @@ WHERE
         """,
         conn,
         params={"match_id": match_id, "map_id": map_id, "player_id": player_id, "opp_id": opp_id},
+    )
+
+
+def load_players_stats(conn: sqlite3.Connection, team_id: int, date: str, duration=180):
+    return pd.read_sql(
+        """
+SELECT pos.* FROM player_overview_stats AS pos
+JOIN matches AS m ON m.id = pos.match_id
+WHERE 
+    pos.team_id = :team_id AND
+    m.date > date(:date, :duration) AND
+    m.date < :date
+        """,
+        conn,
+        params={"team_id": team_id, "date": date, "duration": f"-{duration} days"},
     )
