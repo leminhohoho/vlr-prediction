@@ -1,6 +1,6 @@
 import os
 import sqlite3
-from src.features import get_duel_stats, get_players_stats, get_rounds_stats, get_match_maps_stats
+from src.features import get_duel_stats, get_players_stats, get_rounds_stats, get_match_maps_stats, get_maps_stats
 from src.utils import load_players_stats, load_rounds_stats, load_highlights, load_maps
 
 module_dir = os.path.dirname(os.path.abspath(__file__))
@@ -65,3 +65,15 @@ def test_match_maps_stats():
 
     print()
     print(match_maps_stats)
+
+
+def test_maps_stats():
+    maps = load_maps(conn, "2025-09-07")
+
+    maps = maps[maps["map_id"] == 4]
+
+    maps_stats = get_maps_stats(conn, maps)
+    maps_stats.to_csv("/tmp/maps_test.csv")
+
+    print()
+    print(maps_stats)
