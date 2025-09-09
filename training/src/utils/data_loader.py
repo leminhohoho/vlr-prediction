@@ -28,9 +28,8 @@ WHERE
     )
 
 
-def load_players_stats(conn: sqlite3.Connection, team_id: int, date: str, duration=180):
-    return pd.read_sql(
-        """
+def load_players_stats(conn: sqlite3.Connection, team_id: int, date: str, duration=180, match_id=None, map_id=None):
+    query = """
 SELECT 
     pos.*, 
       (
@@ -44,10 +43,15 @@ WHERE
     pos.team_id = :team_id AND
     m.date > date(:date, :duration) AND
     m.date < :date
-        """,
-        conn,
-        params={"team_id": team_id, "date": date, "duration": f"-{duration} days"},
-    )
+        """
+
+    if match_id is not None:
+        query += f" AND pos.match_id = {match_id}"
+
+    if map_id is not None:
+        query += f" AND pos.map_id = {map_id}"
+
+    return pd.read_sql(query, conn, params={"team_id": team_id, "date": date, "duration": f"-{duration} days"})
 
 
 def load_rounds_stats(conn: sqlite3.Connection, team_id: int, date: str, duration=180):
@@ -124,4 +128,42 @@ WHERE
         """,
         conn,
         params={"team_id": team_id, "date": date, "duration": f"-{duration} days"},
+    )
+
+
+def load_maps(conn: sqlite3.Connection, date: str, duration=180, match_id=-1):
+    """
+    match_id is optional, for distinguish between the curent match that the past matches is fetched for and the other matches
+    """
+    return pd.read_sql(
+        """
+SELECT 
+    mm.match_id,
+    mm.map_id,
+    mm.team_1_id,
+    mm.team_2_id,
+    mm.duration,
+    mm.team_1_def_score,
+    mm.team_1_atk_score,
+    mm.team_1_ot_score,
+    mm.team_2_def_score,
+    mm.team_2_atk_score,
+    mm.team_2_ot_score,
+    (CASE WHEN mm.team_def_first = mm.team_1_id THEN 1 ELSE 2 END) AS team_def_first,
+    (CASE
+        WHEN mm.team_pick = mm.team_1_id THEN 1
+        WHEN mm.team_pick = mm.team_2_id THEN 2
+        ELSE 3
+    END) AS team_pick,
+    m."date"
+FROM 
+    match_maps AS mm
+    JOIN matches AS m ON m.id = mm.match_id 
+WHERE 
+    m.date > date(:date, :duration) AND
+    m.date < :date AND 
+    mm.match_id != :match_id
+    """,
+        conn,
+        params={"date": date, "duration": f"-{duration} days", "match_id": match_id},
     )

@@ -1,7 +1,7 @@
 import os
 import sqlite3
-from src.features import get_duel_stats, get_players_stats, get_rounds_stats
-from src.utils import load_players_stats, load_rounds_stats, load_highlights
+from src.features import get_duel_stats, get_players_stats, get_rounds_stats, get_match_maps_stats
+from src.utils import load_players_stats, load_rounds_stats, load_highlights, load_maps
 
 module_dir = os.path.dirname(os.path.abspath(__file__))
 conn = sqlite3.connect("/database/vlr.db")
@@ -51,3 +51,17 @@ def test_round_stats():
 
     print()
     print(rounds_stats)
+
+
+def test_match_maps_stats():
+    players_stats = load_players_stats(conn, 878, "2025-09-07", match_id=530364)
+    opp_players_stats = load_players_stats(conn, 8304, "2025-09-07", match_id=530364)
+    maps = load_maps(conn, "2025-09-07")
+
+    maps = maps[maps["match_id"] == 530364]
+
+    match_maps_stats = get_match_maps_stats(maps, players_stats, opp_players_stats)
+    match_maps_stats.to_csv("/tmp/match_maps_test.csv")
+
+    print()
+    print(match_maps_stats)
