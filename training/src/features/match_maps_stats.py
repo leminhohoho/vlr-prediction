@@ -4,15 +4,14 @@ import pandas as pd
 def compute_match_map_stats(players_stats_df: pd.DataFrame, opp_players_stats_df: pd.DataFrame):
     def f(row: pd.Series):
         map_players_stats_df = players_stats_df[(players_stats_df["map_id"] == row["map_id"]) & (players_stats_df["side"] == "def")]
-        opp_map_players_stats_df = opp_players_stats_df[(opp_players_stats_df["map_id"] == row["map_id"]) & (players_stats_df["side"] == "def")]
+        opp_map_players_stats_df = opp_players_stats_df[(opp_players_stats_df["map_id"] == row["map_id"]) & (opp_players_stats_df["side"] == "def")]
         team_id = map_players_stats_df.iloc[0]["team_id"]
-
         team_comps = sorted(map_players_stats_df["role"].to_list())
         team_against_comps = sorted(opp_map_players_stats_df["role"].to_list())
-        print(team_comps)
 
         return pd.Series(
             {
+                "map_id": row["map_id"],
                 "team_def_score": row["team_1_def_score"] if row["team_1_id"] == team_id else row["team_2_def_score"],
                 "team_atk_score": row["team_1_atk_score"] if row["team_1_id"] == team_id else row["team_2_atk_score"],
                 "team_ot_score": row["team_1_ot_score"] if row["team_1_id"] == team_id else row["team_2_ot_score"],

@@ -3,13 +3,40 @@ import sqlite3
 
 from src.utils import load_players_stats
 
+_cache = {}
+
+
+def cache_get(query: str):
+    if query in _cache:
+        print(f"get {query} from cache")
+        return _cache[query]
+
+    return None
+
+
+def cache_save(dat, query):
+    _cache[query] = dat
+
+    return dat
+
 
 def compute_map_stats(conn: sqlite3.Connection):
     def f(row: pd.Series):
         # NOTE: Since there is only one map, player stats can be filtered based on match_id
-        team_1_map_players_stats_df = load_players_stats(conn, row["team_1_id"], match_id=row["match_id"])
+        print(f"Processing map {row['match_id']}-{row['map_id']}")
+        team_1_map_players_stats_query = f"{row['match_id']}-{row['map_id']}-{row['team_1_id']}"
+        team_1_map_players_stats_df = cache_get(team_1_map_players_stats_query)
+        if team_1_map_players_stats_df is None:
+            team_1_map_players_stats_df = cache_save(
+                load_players_stats(conn, row["team_1_id"], match_id=row["match_id"]), team_1_map_players_stats_query
+            )
         team_1_map_players_stats_df = team_1_map_players_stats_df[team_1_map_players_stats_df["side"] == "def"]
-        team_2_map_players_stats_df = load_players_stats(conn, row["team_2_id"], match_id=row["match_id"])
+        team_2_map_players_stats_query = f"{row['match_id']}-{row['map_id']}-{row['team_2_id']}"
+        team_2_map_players_stats_df = cache_get(team_2_map_players_stats_query)
+        if team_2_map_players_stats_df is None:
+            team_2_map_players_stats_df = cache_save(
+                load_players_stats(conn, row["team_2_id"], match_id=row["match_id"]), team_2_map_players_stats_query
+            )
         team_2_map_players_stats_df = team_2_map_players_stats_df[team_2_map_players_stats_df["side"] == "def"]
 
         team_1_comps = sorted(team_1_map_players_stats_df["role"].to_list())

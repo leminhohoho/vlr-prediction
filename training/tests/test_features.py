@@ -1,6 +1,7 @@
+import json
 import os
 import sqlite3
-from src.features import get_duel_stats, get_players_stats, get_rounds_stats, get_match_maps_stats, get_maps_stats
+from src.features import get_duel_stats, get_players_stats, get_rounds_stats, get_match_maps_stats, get_maps_stats, compute_stats
 from src.utils import load_players_stats, load_rounds_stats, load_highlights, load_maps
 
 module_dir = os.path.dirname(os.path.abspath(__file__))
@@ -54,11 +55,11 @@ def test_round_stats():
 
 
 def test_match_maps_stats():
-    players_stats = load_players_stats(conn, 878, match_id=530364)
-    opp_players_stats = load_players_stats(conn, 8304, match_id=530364)
+    players_stats = load_players_stats(conn, 878, match_id=458810)
+    opp_players_stats = load_players_stats(conn, 11060, match_id=458810)
     maps = load_maps(conn, "2025-09-07")
 
-    maps = maps[maps["match_id"] == 530364]
+    maps = maps[maps["match_id"] == 458810]
 
     match_maps_stats = get_match_maps_stats(maps, players_stats, opp_players_stats)
     match_maps_stats.to_csv("/tmp/match_maps_test.csv")
@@ -77,3 +78,11 @@ def test_maps_stats():
 
     print()
     print(maps_stats)
+
+
+def test_matches():
+    match_stats = compute_stats(conn, 878, 8304, "playoff", 1, "2025-08-30")
+    dat = json.dumps(match_stats)
+
+    with open("/tmp/dataset_test.json", "w") as f:
+        f.write(dat)

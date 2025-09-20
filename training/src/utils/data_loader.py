@@ -165,8 +165,24 @@ WHERE
     if date is not None:
         query += f" AND m.date > date('{date}', '-{duration} days') AND m.date < '{date}'"
 
-    return pd.read_sql(
-        query,
-        conn,
-        params={"match_id": match_id},
-    )
+    return pd.read_sql(query, conn, params={"match_id": match_id})
+
+
+def load_matches(conn: sqlite3.Connection, team_id: int, date=None, duration=180):
+    query = """
+SELECT 
+    id, url, date, tournament_id, stage,
+    (CASE WHEN :team_id = team_1_id THEN team_1_id ELSE team_2_id END) AS team_id,
+    (CASE WHEN :team_id = team_1_id THEN team_2_id ELSE team_1_id END) AS team_against_id,
+    (CASE WHEN :team_id = team_1_id THEN team_1_score ELSE team_2_score END) AS team_score,
+    (CASE WHEN :team_id = team_1_id THEN team_2_score ELSE team_1_score END) AS team_against_score,
+    (CASE WHEN :team_id = team_1_id THEN team_1_rating ELSE team_2_rating END) AS team_rating,
+    (CASE WHEN :team_id = team_1_id THEN team_2_rating ELSE team_1_rating END) AS team_against_rating
+FROM matches 
+WHERE (team_1_id = :team_id OR team_2_id = :team_id)
+    """
+
+    if date is not None:
+        query += f""" AND "date" > date('{date}', '-{duration} days') AND "date" < '{date}'"""
+
+    return pd.read_sql(query, conn, params={"team_id": team_id})
